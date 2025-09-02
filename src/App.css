@@ -1,0 +1,202 @@
+
+html, body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  overflow: hidden !important;
+}
+body::-webkit-scrollbar, html::-webkit-scrollbar {
+  display: none !important;
+}
+
+
+.mahjong-app {
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  box-sizing: border-box;
+  padding-left: 1em;
+  padding-right: 0;
+  display: flex;
+  flex-direction: column;
+}
+#root {
+  width: 100vw;
+  margin: 0;
+  padding: 2rem 0;
+  box-sizing: border-box;
+}
+
+
+.mahjong-app h1 {
+  color: #2d3a4a;
+  margin-bottom: 1.5em;
+  margin-top: 1em;
+  text-align: center;
+}
+
+.main-layout {
+  display: flex;
+  gap: 1em;
+  align-items: stretch;
+  width: 100vw;
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.game-grid {
+  flex: 1 1 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 2em;
+  min-width: 0;
+  overflow-y: auto;
+  max-height: 75vh;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+th, td {
+  border: 1px solid #e0e0e0;
+  padding: 0.75em 1em;
+  text-align: center;
+}
+th {
+  background: #f0f4fa;
+  color: #2d3a4a;
+  font-weight: 600;
+}
+tr:nth-child(even) td {
+  background: #f9fbfd;
+}
+
+.sidebar {
+  flex: 0 0 220px;
+  max-width: 220px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 1em 1.5em 1em 0.7em;
+  margin-right: 2em;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.sidebar h2 {
+  margin-bottom: 1em;
+  color: #3a4a5a;
+}
+
+.inactive-list, .active-list {
+  margin-bottom: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+/* Inactive player style */
+.inactive-player {
+  background: #f5f8ff;
+  border-radius: 8px;
+  padding: 0.5em 0.7em;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  font-size: 1.05em;
+  border: 1px solid #e0e7ef;
+}
+.inactive-player:hover, .inactive-player.drag-over {
+  background: #e0f0ff;
+  box-shadow: 0 2px 8px rgba(44, 130, 201, 0.12);
+}
+/* Active player style: fixed size, no margin/padding */
+.active-player {
+  background: #eaf0fa;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: background 0.2s, box-shadow 0.2s;
+  min-height: 44px;
+  height: 44px;
+  min-width: 110px;
+  width: 110px;
+  margin: 0 2px;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 1.05em;
+  border: 1px solid #e0e7ef;
+}
+.active-player:active, .active-player:focus {
+  box-shadow: 0 2px 8px rgba(44, 130, 201, 0.12);
+}
+.inactive-player:hover, .active-player:hover {
+  background: #d0e2ff;
+}
+.active-list {
+  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+button {
+  background: #2d7ff9;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5em 1.2em;
+  font-size: 1em;
+  cursor: pointer;
+  margin: 0.2em;
+  transition: background 0.2s;
+}
+button:hover {
+  background: #1a5fc2;
+}
+
+input[type="number"] {
+  font-size: 1.1em;
+  padding: 0.3em 0.7em;
+  border-radius: 6px;
+  border: 1px solid #b0c4de;
+  outline: none;
+  width: 80px;
+}
+
+/* Modal styles */
+.ReactModal__Overlay {
+  background: rgba(44, 62, 80, 0.25) !important;
+  z-index: 1000;
+}
+.ReactModal__Content {
+  border-radius: 12px !important;
+  padding: 2em !important;
+  max-width: 400px;
+  margin: auto;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+}
+
+label {
+  font-weight: 500;
+  color: #2d3a4a;
+  margin-right: 0.5em;
+}
+
+/* Misc */
+.mahjong-app {
+  min-height: 100vh;
+}

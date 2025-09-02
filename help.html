@@ -1,0 +1,38 @@
+<html>
+  <head>
+    <title>Mahjong Score Tracker - Help</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 2em; background: #f8f8fc; color: #222; }
+      h1 { color: #1a5fc2; }
+      ul { margin-top: 1em; }
+      li { margin-bottom: 0.7em; }
+      .back-link { display: inline-block; margin-top: 2em; color: #1a5fc2; text-decoration: underline; font-size: 1.1em; }
+    </style>
+    <script>
+      // Save scroll position before unload
+      window.addEventListener('beforeunload', function() {
+        localStorage.setItem('help_scroll', window.scrollY);
+      });
+      // Restore scroll position on load
+      window.addEventListener('DOMContentLoaded', function() {
+        var y = localStorage.getItem('help_scroll');
+        if (y) window.scrollTo(0, parseInt(y, 10));
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Help &amp; Instructions</h1>
+    <ul>
+        <li><b>Record Game Score:</b> Click the button at the top or press <b>Ctrl+`</b> to open the score modal.</li>
+        <li><b>Edit Game:</b> Click a game number in the grid to edit scores for that game.</li>
+      <li><b>Add/Remove Players:</b> Use the menu to add new players or remove inactive ones. Minimum 4 players required.</li>
+      
+      <li><b>Swap Players:</b> Drag and drop active/inactive players to swap positions.</li>
+      <li><b>Export CSV:</b> Use the menu to export all scores to a CSV file.</li>
+      <li><b>Clear Scores/Players:</b> Use the menu to reset scores or remove all players and games.</li>
+      
+      
+    </ul>
+  <a href="dist/index.html" class="back-link" style="position:fixed;top:16px;right:32px;z-index:1000;background:#fff;padding:8px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">&larr; Back to Score Tracker</a>
+  </body>
+</html>
