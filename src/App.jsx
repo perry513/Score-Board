@@ -166,7 +166,12 @@ function App() {
       }
     }, 100);
   };
-  const closeModal = () => setModalOpen(false);
+  const closeModal = () => {
+    setModalOpen(false);
+    setScoreInput(0);
+    setToggles(['none', 'none', 'none', 'none']);
+    setSelfPick(false);
+  };
 
   // Handle Enter key in modal
   const handleModalKeyDown = (e) => {
@@ -612,7 +617,7 @@ function App() {
           </DragDropContext>
         </div>
       </div>
-      <Modal isOpen={modalOpen} onRequestClose={closeModal} ariaHideApp={false}>
+  <Modal isOpen={modalOpen} onRequestClose={closeModal} ariaHideApp={false} style={{ content: { position: 'relative', minHeight: '380px' } }}>
         <h2>Record Game Score</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1em', marginBottom: '1em' }}>
           <label>Score: <input
@@ -690,8 +695,15 @@ function App() {
             );
           })}
         </div>
-        <button onClick={handleScoreSubmit} style={{ marginTop: '1em' }}>Submit</button>
-        <button onClick={closeModal} style={{ marginLeft: '1em' }}>Cancel</button>
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 24, display: 'flex', justifyContent: 'center', gap: '1em' }}>
+          <button onClick={handleScoreSubmit}>Submit</button>
+          <button onClick={closeModal}>Cancel</button>
+          <button onClick={() => {
+            setScoreInput(0);
+            setToggles(['none', 'none', 'none', 'none']);
+            setSelfPick(false);
+          }}>Clear</button>
+        </div>
         <div tabIndex={0} onKeyDown={handleModalKeyDown} style={{ outline: 'none' }} />
       </Modal>
         {/* Edit previous game modal */}

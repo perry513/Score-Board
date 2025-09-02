@@ -1,0 +1,12 @@
+{
+  "name": "mjtest-prod-zip",
+  "version": "1.0.0",
+  "description": "Script to zip dist, mongoose.exe, and start.bat for production release.",
+  "main": "zip-prod.js",
+  "scripts": {
+    "zip-prod": "node zip-prod.js"
+  },
+  "dependencies": {
+    "archiver": "^5.3.2"
+  }
+}
