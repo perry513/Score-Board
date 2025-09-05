@@ -15,6 +15,8 @@ const defaultPlayers = [
 const defaultGames = [];
 
 function App() {
+  // Font size state for table
+  const [tableFontSize, setTableFontSize] = useState(1.5);
   // Payout modal state
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [payoutRate, setPayoutRate] = useState(1);
@@ -537,7 +539,7 @@ function App() {
                         textDecoration: 'underline', 
                         fontWeight: 700, 
                         color: '#1a5fc2',
-                        fontSize: '1.5em',
+                        fontSize: `${tableFontSize}em`,
                         lineHeight: '1.2',
                         display: 'inline-block',
                         marginBottom: '2px'
@@ -547,7 +549,19 @@ function App() {
                       {p.name}
                     </span>
                     <br />
-                      <span className={`score-box${p.score < 0 ? ' negative' : ''}`}>{p.score}</span>
+                      <span className={`score-box${p.score < 0 ? ' negative' : ''}`}
+                        style={{ 
+                          fontSize: `${tableFontSize * 1.15}em`,
+                          fontWeight: 900,
+                          background: p.score < 0 ? '#ffd6d6' : '#c6f7e2',
+                          boxShadow: '0 2px 8px rgba(44,130,201,0.08)',
+                          border: '2px solid #1a5fc2',
+                          padding: '4px 12px',
+                          marginTop: '2px',
+                          display: 'inline-block',
+                          borderRadius: '8px'
+                        }}
+                      >{p.score}</span>
                   </th>
                 ))}
                 <th style={{ width: '60px' }}>Other</th>
@@ -562,7 +576,9 @@ function App() {
                         const val = game.scores[p.id];
                         return (
                           <td key={p.id}>
-                            <span className={`score-box${val < 0 ? ' negative' : ''}`}>{val}</span>
+                            <span className={`score-box${val < 0 ? ' negative' : ''}`}
+                              style={{ fontSize: `${tableFontSize}em` }}
+                            >{val}</span>
                           </td>
                         );
                       } else {
@@ -573,7 +589,9 @@ function App() {
                       {(() => {
                         const otherScore = getOtherScoreForGame(game);
                         if (typeof otherScore === 'number') {
-                          return <span className={`score-box${otherScore < 0 ? ' negative' : ''}`}>{otherScore}</span>;
+                          return <span className={`score-box${otherScore < 0 ? ' negative' : ''}`}
+                            style={{ fontSize: `${tableFontSize}em` }}
+                          >{otherScore}</span>;
                         }
                         return otherScore;
                       })()}
@@ -623,6 +641,28 @@ function App() {
                   )}
                 </Droppable>
               ))}
+            <div style={{ textAlign: 'center', marginTop: '1.5em' }}>
+              <button onClick={openPayoutModal} style={{ background: '#1976d2', color: '#fff', fontWeight: 600, fontSize: '1.08em', borderRadius: '8px', padding: '0.6em 1.6em', border: 'none', boxShadow: '0 2px 8px rgba(44,130,201,0.08)', marginBottom: '1em' }}>
+                Calculate Payout
+              </button>
+              <div style={{ marginTop: '0.5em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
+                <div style={{ width: '100%' }}>
+                  <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em' }}>Font Size:</label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
+                    <input
+                      type="range"
+                      min={1}
+                      max={4}
+                      step={0.05}
+                      value={tableFontSize}
+                      onChange={e => setTableFontSize(Number(e.target.value))}
+                      style={{ verticalAlign: 'middle' }}
+                    />
+                    <span style={{ fontWeight: 500 }}>{tableFontSize.toFixed(2)}em</span>
+                  </div>
+                </div>
+              </div>
+            </div>
             </div>
           </DragDropContext>
         </div>
@@ -725,11 +765,19 @@ function App() {
             type="number"
             value={payoutRate}
             ref={payoutRateInputRef}
-            min={1}
+            min={0.01}
             step={0.01}
-            onChange={e => setPayoutRate(Number(e.target.value) || 1)}
+            onChange={e => {
+              const val = Number(e.target.value);
+              setPayoutRate(val > 0 ? val : 1);
+            }}
             style={{ background: '#ffffcc', width: '80px', marginLeft: '0.5em' }}
           /></label>
+          {payoutRate === 0 && (
+            <div style={{ color: 'red', marginTop: '0.5em' }}>
+              Payout rate cannot be zero.
+            </div>
+          )}
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1em' }}>
           <thead>
@@ -742,16 +790,19 @@ function App() {
           </thead>
           <tbody>
             {players.map(p => {
-              const payout = payoutRate ? (p.score / payoutRate) : 0;
+              let payout = 0;
+              if (payoutRate > 0) {
+                payout = p.score / payoutRate;
+              }
               return (
                 <tr key={p.id}>
                   <td style={{ textAlign: 'left', fontWeight: 500 }}>{p.name}</td>
                   <td style={{ textAlign: 'right' }}>{p.score}</td>
                   <td style={{ textAlign: 'right', fontWeight: 600, color: payout > 0 ? '#388e3c' : payout < 0 ? '#d32f2f' : '#333' }}>
-                    {payout.toFixed(2)}
+                    {payoutRate > 0 ? payout.toFixed(2) : '--'}
                   </td>
                   <td style={{ textAlign: 'center', fontWeight: 600 }}>
-                    {payout > 0 ? 'Win' : payout < 0 ? 'Lose' : '-'}
+                    {payoutRate > 0 ? (payout > 0 ? 'Win' : payout < 0 ? 'Lose' : '-') : '--'}
                   </td>
                 </tr>
               );

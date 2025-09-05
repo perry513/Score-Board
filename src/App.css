@@ -1,9 +1,18 @@
+/* Compact menu dropdown */
+.menu-popup {
+  min-width: 120px;
+  max-width: 220px;
+  width: fit-content;
+  padding: 0.5em 0;
+  box-sizing: border-box;
+}
 html, body {
   height: 100vh;
   margin: 0;
   padding: 0;
   width: 100vw;
   overflow: hidden !important;
+  font-family: 'Courier New', Courier, 'Lucida Console', 'Monaco', monospace;
 }
 body::-webkit-scrollbar, html::-webkit-scrollbar {
   display: none !important;
@@ -73,7 +82,7 @@ th {
   font-weight: 600;
 }
 tr:nth-child(even) td {
-  background: #f9fbfd;
+  background: #f5f7fa;
 }
 
 .sidebar {
@@ -129,8 +138,8 @@ tr:nth-child(even) td {
   transition: background 0.2s, box-shadow 0.2s;
   min-height: 44px;
   height: 44px;
-  min-width: 110px;
-  width: 110px;
+  min-width: 140px;
+  width: 140px;
   margin: 0 2px;
   text-align: center;
   overflow: hidden;
@@ -201,7 +210,6 @@ label {
 }
 .score-box {
   font-weight: 600;
-  font-size: 2em;
   color: #388e3c;
   background: #d4f8e8;
   border-radius: 6px;
