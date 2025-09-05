@@ -1,4 +1,3 @@
-
 html, body {
   height: 100vh;
   margin: 0;
@@ -199,4 +198,18 @@ label {
 /* Misc */
 .mahjong-app {
   min-height: 100vh;
+}
+.score-box {
+  font-weight: 600;
+  font-size: 2em;
+  color: #388e3c;
+  background: #d4f8e8;
+  border-radius: 6px;
+  padding: 2px 8px;
+  display: inline-block;
+  min-width: 32px;
+}
+.score-box.negative {
+  color: #d32f2f;
+  background: #ffe0e0;
 }

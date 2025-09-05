@@ -15,6 +15,21 @@ const defaultPlayers = [
 const defaultGames = [];
 
 function App() {
+  // Payout modal state
+  const [payoutModalOpen, setPayoutModalOpen] = useState(false);
+  const [payoutRate, setPayoutRate] = useState(1);
+  const payoutRateInputRef = React.useRef(null);
+
+  const openPayoutModal = () => {
+    setPayoutModalOpen(true);
+    setTimeout(() => {
+      if (payoutRateInputRef.current) {
+        payoutRateInputRef.current.focus();
+        payoutRateInputRef.current.select();
+      }
+    }, 100);
+  };
+  const closePayoutModal = () => setPayoutModalOpen(false);
   // State and effects
   // Add 10 random game scores for testing
   const addRandomGames = () => {
@@ -421,7 +436,7 @@ function App() {
             minWidth: '180px',
             padding: '0.5em 0'
           }} className="menu-popup">
-            {['Add Player', 'Clear Scores', 'Clear Players', 'Export CSV'].map((label, idx) => (
+            {['Add Player', 'Clear Scores', 'Clear Players', 'Export CSV', 'Calculate Payout'].map((label, idx) => (
               <button
                 key={label}
                 style={{
@@ -478,6 +493,9 @@ function App() {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                   }
+                  if (label === 'Calculate Payout') {
+                    openPayoutModal();
+                  }
                 }}
               >
                 {label}
@@ -519,22 +537,17 @@ function App() {
                         textDecoration: 'underline', 
                         fontWeight: 700, 
                         color: '#1a5fc2',
-                        fontSize: '1.08em'
+                        fontSize: '1.5em',
+                        lineHeight: '1.2',
+                        display: 'inline-block',
+                        marginBottom: '2px'
                       }} 
                       onClick={() => changePlayerName(p.id)}
                     >
                       {p.name}
                     </span>
                     <br />
-                    <span style={{
-                      fontWeight: 600,
-                      color: p.score > 0 ? '#388e3c' : p.score < 0 ? '#d32f2f' : '#333',
-                      background: p.score > 0 ? '#d4f8e8' : p.score < 0 ? '#ffe0e0' : 'transparent',
-                      borderRadius: '6px',
-                      padding: '2px 8px',
-                      display: 'inline-block',
-                      minWidth: '32px'
-                    }}>{p.score}</span>
+                      <span className={`score-box${p.score < 0 ? ' negative' : ''}`}>{p.score}</span>
                   </th>
                 ))}
                 <th style={{ width: '60px' }}>Other</th>
@@ -544,29 +557,26 @@ function App() {
               {[...games].reverse().map((game, idx) => (
                 <tr key={idx}>
                   <td style={{ cursor: 'pointer', textDecoration: 'underline', color: '#2d7ff9' }} onClick={() => openEditModal(games.length - 1 - idx)}>{game.number}</td>
-                  {getActivePlayers().map((p, i) => {
-                    let scoreStyle = {};
-                    if (game.active.includes(p.id)) {
-                      const val = game.scores[p.id];
-                      if (val > 0) scoreStyle = { fontWeight: 600, color: '#388e3c', background: '#d4f8e8', borderRadius: '6px', padding: '2px 8px', display: 'inline-block', minWidth: '32px' };
-                      if (val < 0) scoreStyle = { fontWeight: 600, color: '#d32f2f', background: '#ffe0e0', borderRadius: '6px', padding: '2px 8px', display: 'inline-block', minWidth: '32px' };
-                    }
-                    return (
-                      <td key={p.id}>
-                        {game.active.includes(p.id) ? <span style={scoreStyle}>{game.scores[p.id]}</span> : '-'}
-                      </td>
-                    );
-                  })}
-                  <td>
-                    {(() => {
-                      const otherScore = getOtherScoreForGame(game);
-                      let scoreStyle = {};
-                      if (typeof otherScore === 'number') {
-                        if (otherScore > 0) scoreStyle = { fontWeight: 600, color: '#388e3c', background: '#d4f8e8', borderRadius: '6px', padding: '2px 8px', display: 'inline-block', minWidth: '32px' };
-                        if (otherScore < 0) scoreStyle = { fontWeight: 600, color: '#d32f2f', background: '#ffe0e0', borderRadius: '6px', padding: '2px 8px', display: 'inline-block', minWidth: '32px' };
+                    {getActivePlayers().map((p, i) => {
+                      if (game.active.includes(p.id)) {
+                        const val = game.scores[p.id];
+                        return (
+                          <td key={p.id}>
+                            <span className={`score-box${val < 0 ? ' negative' : ''}`}>{val}</span>
+                          </td>
+                        );
+                      } else {
+                        return <td key={p.id}>-</td>;
                       }
-                      return typeof otherScore === 'number' ? <span style={scoreStyle}>{otherScore}</span> : otherScore;
-                    })()}
+                    })}
+                  <td>
+                      {(() => {
+                        const otherScore = getOtherScoreForGame(game);
+                        if (typeof otherScore === 'number') {
+                          return <span className={`score-box${otherScore < 0 ? ' negative' : ''}`}>{otherScore}</span>;
+                        }
+                        return otherScore;
+                      })()}
                   </td>
                 </tr>
               ))}
@@ -707,6 +717,51 @@ function App() {
         <div tabIndex={0} onKeyDown={handleModalKeyDown} style={{ outline: 'none' }} />
       </Modal>
         {/* Edit previous game modal */}
+      {/* Calculate payout modal */}
+      <Modal isOpen={payoutModalOpen} onRequestClose={closePayoutModal} ariaHideApp={false} style={{ content: { minWidth: '340px', minHeight: '320px', maxWidth: '420px', margin: 'auto', borderRadius: '12px' } }}>
+        <h2>Calculate Payout</h2>
+        <div style={{ marginBottom: '1em' }}>
+          <label>Rate: <input
+            type="number"
+            value={payoutRate}
+            ref={payoutRateInputRef}
+            min={1}
+            step={0.01}
+            onChange={e => setPayoutRate(Number(e.target.value) || 1)}
+            style={{ background: '#ffffcc', width: '80px', marginLeft: '0.5em' }}
+          /></label>
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1em' }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', fontWeight: 600, fontSize: '1.1em' }}>Player</th>
+              <th style={{ textAlign: 'right', fontWeight: 600, fontSize: '1.1em' }}>Score</th>
+              <th style={{ textAlign: 'right', fontWeight: 600, fontSize: '1.1em' }}>Payout</th>
+              <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '1.1em' }}>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {players.map(p => {
+              const payout = payoutRate ? (p.score / payoutRate) : 0;
+              return (
+                <tr key={p.id}>
+                  <td style={{ textAlign: 'left', fontWeight: 500 }}>{p.name}</td>
+                  <td style={{ textAlign: 'right' }}>{p.score}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 600, color: payout > 0 ? '#388e3c' : payout < 0 ? '#d32f2f' : '#333' }}>
+                    {payout.toFixed(2)}
+                  </td>
+                  <td style={{ textAlign: 'center', fontWeight: 600 }}>
+                    {payout > 0 ? 'Win' : payout < 0 ? 'Lose' : '-'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div style={{ textAlign: 'center' }}>
+          <button onClick={closePayoutModal} style={{ minWidth: '100px' }}>Close</button>
+        </div>
+      </Modal>
         <Modal isOpen={editModalOpen} onRequestClose={closeEditModal} ariaHideApp={false}>
           <h2>Edit Game #{editGameIdx !== null ? games[editGameIdx].number : ''}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1em', marginBottom: '1em' }}>
