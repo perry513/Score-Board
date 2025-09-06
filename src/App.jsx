@@ -105,6 +105,8 @@ function App() {
   const [editToggles, setEditToggles] = useState(['none', 'none', 'none', 'none']);
   const [editSelfPick, setEditSelfPick] = useState(false);
   const editScoreInputRef = React.useRef(null);
+  // Chu-Chong multiplier setting
+  const [chuChongMultiplier, setChuChongMultiplier] = useState(2);
 
   // Helper functions
   const getActivePlayers = () => players.filter(p => activePlayerIds.includes(p.id));
@@ -270,13 +272,13 @@ function App() {
         if (selfPick) {
           delta = scoreInput * 3;
         } else {
-          delta = winCount === 1 && loseCount === 3 ? scoreInput * 3 : scoreInput * 2;
+          delta = winCount === 1 && loseCount === 3 ? scoreInput * 3 : scoreInput * chuChongMultiplier;
         }
       } else if (toggles[idx] === 'lose') {
         if (selfPick) {
           delta = -scoreInput;
         } else {
-          delta = winCount === 1 && loseCount === 3 ? -scoreInput : -scoreInput * 2;
+          delta = winCount === 1 && loseCount === 3 ? -scoreInput : -scoreInput * chuChongMultiplier;
         }
       }
       gameScores[p.id] = delta;
@@ -363,13 +365,13 @@ function App() {
         if (editSelfPick) {
           delta = editScoreInput * 3;
         } else {
-          delta = winCount === 1 && loseCount === 3 ? editScoreInput * 3 : editScoreInput * 2;
+          delta = winCount === 1 && loseCount === 3 ? editScoreInput * 3 : editScoreInput * chuChongMultiplier;
         }
       } else if (editToggles[idx] === 'lose') {
         if (editSelfPick) {
           delta = -editScoreInput;
         } else {
-          delta = winCount === 1 && loseCount === 3 ? -editScoreInput : -editScoreInput * 2;
+          delta = winCount === 1 && loseCount === 3 ? -editScoreInput : -editScoreInput * chuChongMultiplier;
         }
       }
       gameScores[p.id] = delta;
@@ -525,12 +527,12 @@ function App() {
           </div>
         )}
       </div>
-      <div className="main-layout">
-        <div className="game-grid">
+      <div className="main-layout" style={{ display: 'flex', alignItems: 'flex-start' }}>
+        <div className="game-grid" style={{ flex: 1 }}>
           <table>
             <thead>
               <tr>
-                <th style={{ width: '60px' }}>Game #</th>
+                <th style={{ width: '60px' }}>#</th>
                 {getActivePlayers().map(p => (
                   <th key={p.id}>
                     <span 
@@ -546,7 +548,7 @@ function App() {
                       }} 
                       onClick={() => changePlayerName(p.id)}
                     >
-                      {p.name}
+                        {p.name}
                     </span>
                     <br />
                       <span className={`score-box${p.score < 0 ? ' negative' : ''}`}
@@ -559,7 +561,19 @@ function App() {
                           padding: '4px 12px',
                           marginTop: '2px',
                           display: 'inline-block',
-                          borderRadius: '8px'
+                          borderRadius: '8px',
+                          cursor: 'pointer'
+                        }}
+                        title="Record score for this player"
+                        onClick={() => {
+                          setModalOpen(true);
+                          setToggles(getActivePlayers().map(pp => pp.id === p.id ? 'win' : 'none'));
+                          setTimeout(() => {
+                            if (scoreInputRef && scoreInputRef.current) {
+                              scoreInputRef.current.focus();
+                              scoreInputRef.current.select();
+                            }
+                          }, 100);
                         }}
                       >{p.score}</span>
                   </th>
@@ -601,7 +615,7 @@ function App() {
             </tbody>
           </table>
         </div>
-        <div className="sidebar">
+        <div className="sidebar" style={{ width: '260px', background: '#f7faff', borderLeft: '1px solid #e0e0e0', minHeight: '100vh', position: 'relative', overflow: 'auto', padding: '36px 12px 12px 36px' }}>
           <h2>Inactive Players</h2>
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="active-list" direction="horizontal">
@@ -624,52 +638,106 @@ function App() {
             <div className="inactive-list">
               {getInactivePlayers().map((p, idx) => (
                 <Droppable droppableId={`inactive-${idx}`} key={p.id}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className="inactive-player"
-                      style={{
-                        background: snapshot.isDraggingOver ? '#ffe0e0' : undefined,
-                        transition: 'background 0.2s',
-                      }}
-                    >
-                      <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => changePlayerName(p.id)}>{p.name}</span> ({p.score})
-                      <button style={{ marginLeft: '0.5em', padding: '2px 8px', fontSize: '0.85em', borderRadius: '4px', background: '#e0e0e0', color: '#333', border: '1px solid #ccc' }} onClick={() => removePlayer(p.id)}>✕</button>
-                      {provided.placeholder}
-                    </div>
-                  )}
+                  {(provided, snapshot) => {
+                    // Color and size based on score
+                    let bg = '#f5f8ff';
+                    let border = '2px solid #e0e0e0';
+                    if (typeof p.score === 'number') {
+                      if (p.score > 0) {
+                        bg = '#d4f8e8';
+                        border = '2px solid #4caf50';
+                      } else if (p.score < 0) {
+                        bg = '#ffe0e0';
+                        border = '2px solid #f44336';
+                      }
+                    }
+                    return (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="inactive-player"
+                        style={{
+                          background: snapshot.isDraggingOver ? '#ffe0e0' : bg,
+                          transition: 'background 0.2s',
+                          minHeight: '44px',
+                          fontSize: '1em',
+                          padding: '0.5em 1em',
+                          borderRadius: '10px',
+                          boxShadow: '0 1px 6px rgba(44,130,201,0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          border,
+                          marginBottom: '0.5em',
+                        }}
+                      >
+                        <span style={{ fontWeight: 700, marginRight: '1.2em', fontSize: '1.18em' }}>{p.name}</span>
+                        <span style={{ fontWeight: 900, color: p.score < 0 ? '#d32f2f' : p.score > 0 ? '#388e3c' : '#222', fontSize: '1.18em', marginRight: '1.2em' }}>{p.score}</span>
+                        <button
+                          style={{
+                            marginLeft: 'auto',
+                            fontSize: '1.1em',
+                            background: p.score < 0 ? '#f44336' : p.score > 0 ? '#4caf50' : '#b0bec5',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            padding: '0.3em 0.7em',
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 4px rgba(44,130,201,0.10)',
+                            transition: 'background 0.2s',
+                          }}
+                          title="Remove player"
+                          onClick={() => removePlayer(p.id)}
+                        >✕</button>
+                        {provided.placeholder}
+                      </div>
+                    );
+                  }}
                 </Droppable>
               ))}
-            <div style={{ textAlign: 'center', marginTop: '1.5em' }}>
-              <button onClick={openPayoutModal} style={{ background: '#1976d2', color: '#fff', fontWeight: 600, fontSize: '1.08em', borderRadius: '8px', padding: '0.6em 1.6em', border: 'none', boxShadow: '0 2px 8px rgba(44,130,201,0.08)', marginBottom: '1em' }}>
-                Calculate Payout
-              </button>
-              <div style={{ marginTop: '0.5em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
-                <div style={{ width: '100%' }}>
-                  <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em' }}>Font Size:</label>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
-                    <input
-                      type="range"
-                      min={1}
-                      max={4}
-                      step={0.05}
-                      value={tableFontSize}
-                      onChange={e => setTableFontSize(Number(e.target.value))}
-                      style={{ verticalAlign: 'middle' }}
-                    />
-                    <span style={{ fontWeight: 500 }}>{tableFontSize.toFixed(2)}em</span>
+              <div style={{ textAlign: 'center', marginTop: '1.5em' }}>
+                <button onClick={openPayoutModal} style={{ background: '#1976d2', color: '#fff', fontWeight: 600, fontSize: '1.08em', borderRadius: '8px', padding: '0.6em 1.6em', border: 'none', boxShadow: '0 2px 8px rgba(44,130,201,0.08)', marginBottom: '1em' }}>
+                  Calculate Payout
+                </button>
+                <div style={{ marginTop: '0.5em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
+                  <div style={{ width: '100%' }}>
+                    <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em' }}>Font Size:</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
+                      <input
+                        type="range"
+                        min={1}
+                        max={4}
+                        step={0.05}
+                        value={tableFontSize}
+                        onChange={e => setTableFontSize(Number(e.target.value))}
+                        style={{ verticalAlign: 'middle' }}
+                      />
+                      <span style={{ fontWeight: 500 }}>{tableFontSize.toFixed(2)}em</span>
+                    </div>
+                    <div style={{ marginTop: '1em', marginBottom: '1em' }}>
+                      <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em', color: '#222', fontSize: '1em' }}>Chu-Chong Multiplier:</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={3}
+                        step={0.5}
+                        value={chuChongMultiplier}
+                        onChange={e => setChuChongMultiplier(Math.max(1, Math.min(3, Number(e.target.value))))}
+                        style={{ width: '60px', background: '#e3f2fd', fontWeight: 600 }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            </div>
           </DragDropContext>
         </div>
       </div>
+        
   <Modal isOpen={modalOpen} onRequestClose={closeModal} ariaHideApp={false} style={{ content: { position: 'relative', minHeight: '380px' } }}>
-        <h2>Record Game Score</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1em', marginBottom: '1em' }}>
+  <h2>Record Game Score</h2>
+  {/* Make Enter key always submit in modal */}
+  <div onKeyDown={e => { if (e.key === 'Enter') handleScoreSubmit(); }} tabIndex={0} style={{ outline: 'none' }}>
+        <div style={{ marginBottom: '1em', display: 'flex', alignItems: 'center', gap: '1em' }}>
           <label>Score: <input
             type="number"
             value={scoreInput}
@@ -677,9 +745,11 @@ function App() {
             onChange={e => setScoreInput(Number(e.target.value))}
             onClick={e => e.target.select()}
             style={{ background: '#ffffcc' }}
+            tabIndex={0}
           /></label>
           <button
             type="button"
+            tabIndex={1}
             onClick={() => {
               setSelfPick(sp => {
                 const next = !sp;
@@ -714,47 +784,62 @@ function App() {
           </button>
         </div>
         <div style={{ marginTop: '1em' }}>
-          {getActivePlayers().map((p, idx) => {
-            let label = '';
-            if (toggles[idx] === 'win') {
-              label = selfPick ? scoreInput * 3 : (toggles.filter(t => t === 'lose').length === 3 ? scoreInput * 3 : scoreInput * 2);
-            } else if (toggles[idx] === 'lose') {
-              label = selfPick ? -scoreInput : (toggles.filter(t => t === 'lose').length === 3 ? -scoreInput : -scoreInput * 2);
-            }
-            return (
-              <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '120px 90px 1fr', alignItems: 'center', gap: '0.5em', marginBottom: '0.5em' }}>
-                <span style={{ cursor: 'pointer', textDecoration: 'underline', justifySelf: 'start', textAlign: 'left', fontWeight: 500 }} onClick={() => changePlayerName(p.id)}>{p.name}</span>
-                <button 
+          <div style={{ display: 'flex', gap: '1em', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1em' }}>
+            {getActivePlayers().map((p, idx) => {
+              let bg = '#e0e0e0';
+              let color = '#333';
+              if (toggles[idx] === 'win') {
+                bg = '#4caf50';
+                color = '#fff';
+              } else if (toggles[idx] === 'lose') {
+                bg = '#f44336';
+                color = '#fff';
+              }
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  tabIndex={2 + idx}
                   onClick={() => handleToggle(idx)}
                   style={{
-                    width: '90px',
-                    background: toggles[idx] === 'win' ? '#4caf50' : toggles[idx] === 'lose' ? '#f44336' : undefined,
-                    color: toggles[idx] === 'win' || toggles[idx] === 'lose' ? '#fff' : undefined,
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    border: '1px solid #ccc',
-                    padding: '0.3em 0',
-                    textTransform: 'capitalize',
-                    justifySelf: 'center'
+                    minWidth: '120px',
+                    minHeight: '56px',
+                    background: bg,
+                    color,
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(44,130,201,0.10)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '1.15em',
+                    cursor: 'pointer',
+                    border: '2px solid #bbb',
+                    marginBottom: '0.5em',
+                    padding: '0.5em 1em',
                   }}
+                  title={`Toggle win/lose/none for ${p.name}`}
                 >
-                  {toggles[idx]}
+                  <span style={{ textDecoration: 'underline' }}>{p.name}</span>
+                  <span style={{ marginTop: '0.3em', fontWeight: 600, fontSize: '1em', textTransform: 'capitalize' }}>{toggles[idx]}</span>
                 </button>
-                <span style={{ justifySelf: 'start', minWidth: '40px', textAlign: 'left' }}>{label !== '' ? label : ''}</span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 24, display: 'flex', justifyContent: 'center', gap: '1em' }}>
-          <button onClick={handleScoreSubmit}>Submit</button>
-          <button onClick={closeModal}>Cancel</button>
-          <button onClick={() => {
-            setScoreInput(0);
-            setToggles(['none', 'none', 'none', 'none']);
-            setSelfPick(false);
-          }}>Clear</button>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '2em', marginBottom: '0.5em' }}>
+          <button onClick={handleScoreSubmit} style={{ fontSize: '1.4em', padding: '0.6em 2.5em', borderRadius: '10px', fontWeight: 700, background: '#1976d2', color: '#fff', marginBottom: '1em', boxShadow: '0 2px 8px rgba(44,130,201,0.10)' }}>Submit</button>
+          <div style={{ display: 'flex', gap: '1em' }}>
+            <button onClick={closeModal} style={{ fontSize: '1em', padding: '0.4em 1.5em', borderRadius: '8px', background: '#eee', color: '#333', fontWeight: 600 }}>Cancel</button>
+            <button onClick={() => {
+              setScoreInput(0);
+              setToggles(['none', 'none', 'none', 'none']);
+              setSelfPick(false);
+            }} style={{ fontSize: '1em', padding: '0.4em 1.5em', borderRadius: '8px', background: '#eee', color: '#333', fontWeight: 600 }}>Clear</button>
+          </div>
         </div>
-        <div tabIndex={0} onKeyDown={handleModalKeyDown} style={{ outline: 'none' }} />
+  </div>
       </Modal>
         {/* Edit previous game modal */}
       {/* Calculate payout modal */}
@@ -863,9 +948,9 @@ function App() {
             {editGameIdx !== null && games[editGameIdx] && players.filter(p => games[editGameIdx].active.includes(p.id)).map((p, idx) => {
               let label = '';
               if (editToggles[idx] === 'win') {
-                label = editSelfPick ? editScoreInput * 3 : (editToggles.filter(t => t === 'lose').length === 3 ? editScoreInput * 3 : editScoreInput * 2);
+                label = editSelfPick ? editScoreInput * 3 : (editToggles.filter(t => t === 'lose').length === 3 ? editScoreInput * 3 : editScoreInput * chuChongMultiplier);
               } else if (editToggles[idx] === 'lose') {
-                label = editSelfPick ? -editScoreInput : (editToggles.filter(t => t === 'lose').length === 3 ? -editScoreInput : -editScoreInput * 2);
+                label = editSelfPick ? -editScoreInput : (editToggles.filter(t => t === 'lose').length === 3 ? -editScoreInput : -editScoreInput * chuChongMultiplier);
               }
               return (
                 <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '120px 90px 1fr', alignItems: 'center', gap: '0.5em', marginBottom: '0.5em' }}>
