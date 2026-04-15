@@ -1,5 +1,5 @@
 {
-  "name": "mjtest-prod-zip",
+  "name": "scoreboard-prod-zip",
   "version": "1.0.0",
   "description": "Script to zip dist, mongoose.exe, and start.bat for production release.",
   "main": "zip-prod.js",

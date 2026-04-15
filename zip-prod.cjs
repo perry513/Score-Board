@@ -2,12 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
 
-const output = fs.createWriteStream(path.join(__dirname, 'prodRelease', 'mjtest-prod.zip'));
+const output = fs.createWriteStream(path.join(__dirname, 'prodRelease', 'scoreboard-prod.zip'));
 const archive = archiver('zip', { zlib: { level: 9 } });
 
 output.on('close', function() {
   console.log(archive.pointer() + ' total bytes');
-  console.log('mjtest-prod.zip created in prodRelease folder');
+  console.log('scoreboard-prod.zip created in prodRelease folder');
 });
 
 archive.on('error', function(err) {
