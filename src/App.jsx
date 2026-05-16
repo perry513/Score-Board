@@ -488,34 +488,6 @@ function App() {
 
   return (
     <div className="mahjong-app" style={{ position: 'relative', minHeight: '100vh' }}>
-      {/* Score Rule Selector - Top Right, fixed and always visible */}
-      <div style={{
-        position: 'fixed',
-        top: '24px',
-        right: '32px',
-        background: '#f7faff',
-        border: '1.5px solid #1976d2',
-        borderRadius: '12px',
-        padding: '0.7em 1.5em',
-        zIndex: 9999,
-        boxShadow: '0 2px 8px rgba(44,130,201,0.10)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.7em',
-        fontWeight: 600,
-        fontSize: '1.08em',
-      }}>
-        <label htmlFor="score-rule-select" style={{ marginRight: '0.5em', color: '#1976d2' }}>Score Rule:</label>
-        <select
-          id="score-rule-select"
-          value={scoreRule}
-          onChange={e => setScoreRule(e.target.value)}
-          style={{ fontWeight: 700, fontSize: '1.08em', padding: '0.2em 1em', borderRadius: '6px', border: '1px solid #1976d2', background: '#fff', color: '#1976d2' }}
-        >
-          <option value="mahjong">Mahjong</option>
-          <option value="scrabble">Scrabble</option>
-        </select>
-      </div>
       <h1>Score Tracker</h1>
       <div className="add-player-container" style={{ gap: '1em', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ position: 'absolute', left: 0 }}>
@@ -538,28 +510,17 @@ function App() {
             <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { setPlayers(defaultPlayers); setGames([]); setActivePlayerIds(['p1', 'p2', 'p3', 'p4']); setMenuOpen(false); }}>New Game</button>
             <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { const name = prompt('Enter new player name:'); if (name) setPlayers(players => [...players, { id: 'p' + (players.length + 1), name, score: 0 }]); setMenuOpen(false); }}>Add Player</button>
             <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { setPlayers(players => players.map(p => ({ ...p, score: 0 }))); setGames([]); setMenuOpen(false); }}>Clear Scores</button>
-            <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { navigator.clipboard.writeText(JSON.stringify({ players, games, activePlayerIds })); setMenuOpen(false); alert('Data copied to clipboard!'); }}>Export Data</button>
-            <label style={{ width: '100%', display: 'block', marginBottom: '0.5em' }}>
-              <span style={{ display: 'block', marginBottom: '0.2em' }}>Import Data</span>
-              <input type="file" accept="application/json" style={{ width: '100%' }} onChange={async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const text = await file.text();
-                try {
-                  const data = JSON.parse(text);
-                  if (data.players && data.games && data.activePlayerIds) {
-                    setPlayers(data.players);
-                    setGames(data.games);
-                    setActivePlayerIds(data.activePlayerIds);
-                    alert('Data imported!');
-                  } else {
-                    alert('Invalid data format.');
-                  }
-                } catch {
-                  alert('Failed to parse file.');
-                }
-                setMenuOpen(false);
-              }} />
+            <label htmlFor="menu-score-rule-select" style={{ width: '100%', display: 'block', marginBottom: '0.5em', fontWeight: 600, color: '#1976d2' }}>
+              <span style={{ display: 'block', marginBottom: '0.2em' }}>Score Rule</span>
+              <select
+                id="menu-score-rule-select"
+                value={scoreRule}
+                onChange={e => setScoreRule(e.target.value)}
+                style={{ width: '100%', fontWeight: 700, fontSize: '1em', padding: '0.3em 0.6em', borderRadius: '6px', border: '1px solid #1976d2', background: '#fff', color: '#1976d2' }}
+              >
+                <option value="mahjong">Mahjong</option>
+                <option value="scrabble">Scrabble</option>
+              </select>
             </label>
             <button style={{ width: '100%' }} onClick={() => setMenuOpen(false)}>Close Menu</button>
           </div>
