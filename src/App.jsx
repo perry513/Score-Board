@@ -30,7 +30,7 @@ function App() {
     // Track if popup was opened for Scrabble
     const [scrabblePopup, setScrabblePopup] = useState(false);
   // Font size state for table
-  const [tableFontSize, setTableFontSize] = useState(1.5);
+  const [tableFontSize, setTableFontSize] = useState(4);
   // Payout modal state
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [payoutRate, setPayoutRate] = useState(1);
@@ -292,8 +292,8 @@ function App() {
         }
         return 'none';
       });
-      // If editSelfPick is enabled and a player is set to win, set all others to lose
-      if (editSelfPick && newToggles.filter(t => t === 'win').length === 1) {
+      // If self-pick is enabled and a player is set to win, set all others to lose
+      if (selfPick && newToggles.filter(t => t === 'win').length === 1) {
         newToggles = newToggles.map((t, i) => t === 'win' ? 'win' : 'lose');
       }
       return newToggles;
@@ -372,7 +372,7 @@ function App() {
       } else if (winCount === 1 && loseCount === 3) {
         scoreVal = Math.abs(winnerVal / 3);
       } else if (winCount === 1 && loseCount === 1) {
-        scoreVal = Math.abs(winnerVal / 2);
+        scoreVal = Math.abs(winnerVal / chuChongMultiplier);
       }
     }
     setEditScoreInput(scoreVal);
@@ -391,6 +391,31 @@ function App() {
     if (e.key === 'Enter') {
       handleEditScoreSubmit();
     }
+  };
+  const handleEditToggle = (idx) => {
+    setEditToggles(prev => {
+      const hasWinner = prev.includes('win');
+      let next = prev.map((t, i) => {
+        if (i !== idx) return t;
+        if (hasWinner) {
+          // Cycle: none -> lose -> win -> none
+          if (t === 'none') return 'lose';
+          if (t === 'lose') return 'win';
+          if (t === 'win') return 'none';
+        } else {
+          // Cycle: none -> win -> lose -> none
+          if (t === 'none') return 'win';
+          if (t === 'win') return 'lose';
+          if (t === 'lose') return 'none';
+        }
+        return 'none';
+      });
+
+      if (editSelfPick && next.filter(t => t === 'win').length === 1) {
+        next = next.map(t => t === 'win' ? 'win' : 'lose');
+      }
+      return next;
+    });
   };
   const handleEditScoreSubmit = () => {
     // Validate toggles
@@ -834,6 +859,18 @@ function App() {
                 </button>
                 <div style={{ marginTop: '0.5em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
                   <div style={{ width: '100%' }}>
+                    <div style={{ marginTop: '1em', marginBottom: '1em' }}>
+                      <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em', color: '#222', fontSize: '1em' }}>Chu-Chong Multiplier:</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={3}
+                        step={0.5}
+                        value={chuChongMultiplier}
+                        onChange={e => setChuChongMultiplier(Math.max(1, Math.min(3, Number(e.target.value))))}
+                        style={{ width: '60px', background: '#e3f2fd', fontWeight: 600 }}
+                      />
+                    </div>
                     <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em' }}>Font Size:</label>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
                       <input
@@ -846,18 +883,6 @@ function App() {
                         style={{ verticalAlign: 'middle' }}
                       />
                       <span style={{ fontWeight: 500 }}>{tableFontSize.toFixed(2)}em</span>
-                    </div>
-                    <div style={{ marginTop: '1em', marginBottom: '1em' }}>
-                      <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em', color: '#222', fontSize: '1em' }}>Chu-Chong Multiplier:</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={3}
-                        step={0.5}
-                        value={chuChongMultiplier}
-                        onChange={e => setChuChongMultiplier(Math.max(1, Math.min(3, Number(e.target.value))))}
-                        style={{ width: '60px', background: '#e3f2fd', fontWeight: 600 }}
-                      />
                     </div>
                   </div>
                 </div>
