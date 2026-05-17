@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import Modal from 'react-modal';
+import mjRulesPdf from './assets/mjRules.pdf';
 import './App.css';
 
 // Sample initial data
@@ -30,7 +31,16 @@ function App() {
     // Track if popup was opened for Scrabble
     const [scrabblePopup, setScrabblePopup] = useState(false);
   // Font size state for table
-  const [tableFontSize, setTableFontSize] = useState(4);
+  const [tableFontSize, setTableFontSize] = useState(() => {
+    const saved = Number(localStorage.getItem('table_font_size'));
+    if (Number.isFinite(saved)) {
+      return Math.max(1, Math.min(4, saved));
+    }
+    return 4;
+  });
+  useEffect(() => {
+    localStorage.setItem('table_font_size', String(tableFontSize));
+  }, [tableFontSize]);
   // Payout modal state
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [payoutRate, setPayoutRate] = useState(1);
@@ -169,6 +179,7 @@ function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [scoreInput, setScoreInput] = useState(0);
   const scoreInputRef = React.useRef(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toggles, setToggles] = useState(['none', 'none', 'none', 'none']);
   const [selfPick, setSelfPick] = useState(false);
   // Edit game modal state
@@ -179,7 +190,16 @@ function App() {
   const [editSelfPick, setEditSelfPick] = useState(false);
   const editScoreInputRef = React.useRef(null);
   // Chu-Chong multiplier setting
-  const [chuChongMultiplier, setChuChongMultiplier] = useState(2);
+  const [chuChongMultiplier, setChuChongMultiplier] = useState(() => {
+    const saved = Number(localStorage.getItem('chu_chong_multiplier'));
+    if (Number.isFinite(saved)) {
+      return Math.max(1, Math.min(3, saved));
+    }
+    return 2;
+  });
+  useEffect(() => {
+    localStorage.setItem('chu_chong_multiplier', String(chuChongMultiplier));
+  }, [chuChongMultiplier]);
 
   // Helper functions
   const getActivePlayers = () => players.filter(p => activePlayerIds.includes(p.id));
@@ -487,8 +507,7 @@ function App() {
   }, []);
 
   return (
-    <div className="mahjong-app" style={{ position: 'relative', minHeight: '100vh' }}>
-      <h1>Score Tracker</h1>
+    <div className="mahjong-app" style={{ position: 'relative', height: '100vh', boxSizing: 'border-box', paddingTop: '14px', display: 'flex', flexDirection: 'column' }}>
       <div className="add-player-container" style={{ gap: '1em', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ position: 'absolute', left: 0 }}>
           <button className="menu-btn" onClick={() => setMenuOpen(m => !m)} style={{ minWidth: '120px' }}>☰ Menu</button>
@@ -522,12 +541,47 @@ function App() {
                 <option value="scrabble">Scrabble</option>
               </select>
             </label>
-            <button style={{ width: '100%' }} onClick={() => setMenuOpen(false)}>Close Menu</button>
+            <div style={{ width: '100%', marginBottom: '0.6em' }}>
+              <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em', color: '#222', fontSize: '1em' }}>Chu-Chong Multiplier:</label>
+              <input
+                type="number"
+                min={1}
+                max={3}
+                step={0.5}
+                value={chuChongMultiplier}
+                onChange={e => setChuChongMultiplier(Math.max(1, Math.min(3, Number(e.target.value))))}
+                style={{ width: '80px', background: '#e3f2fd', fontWeight: 600 }}
+              />
+            </div>
+            <div style={{ width: '100%', marginBottom: '0.7em' }}>
+              <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em' }}>Font Size:</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.7em' }}>
+                <input
+                  type="range"
+                  min={1}
+                  max={4}
+                  step={0.05}
+                  value={tableFontSize}
+                  onChange={e => setTableFontSize(Number(e.target.value))}
+                  style={{ verticalAlign: 'middle', flex: 1 }}
+                />
+                <span style={{ fontWeight: 500, minWidth: '58px', textAlign: 'right' }}>{tableFontSize.toFixed(2)}em</span>
+              </div>
+            </div>
+            <button
+              style={{ width: '100%' }}
+              onClick={() => {
+                window.open(mjRulesPdf, '_blank', 'noopener,noreferrer');
+                setMenuOpen(false);
+              }}
+            >
+              View Rules
+            </button>
           </div>
         )}
       </div>
-      <div className="main-layout" style={{ display: 'flex', alignItems: 'flex-start' }}>
-        <div className="game-grid" style={{ flex: 1 }}>
+      <div className="main-layout" style={{ display: 'flex', alignItems: 'stretch', flex: 1, minHeight: 0 }}>
+        <div className="game-grid" style={{ flex: 1, minHeight: 0 }}>
           <table>
             <thead>
               <DragDropContext onDragEnd={onDragEnd}>
@@ -639,8 +693,39 @@ function App() {
             </tbody>
           </table>
         </div>
-        <div className="sidebar" style={{ width: '260px', background: '#f7faff', borderLeft: '1px solid #e0e0e0', minHeight: '100vh', position: 'relative', overflow: 'auto', padding: '36px 12px 12px 36px' }}>
-          <h2>Inactive Players</h2>
+        <div style={{ position: 'relative', width: sidebarCollapsed ? '36px' : '260px', height: '100%', flex: '0 0 auto', transition: 'width 0.2s ease' }}>
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed(v => !v)}
+            title={sidebarCollapsed ? 'Expand right pane' : 'Collapse right pane'}
+            style={{
+              position: 'absolute',
+              left: sidebarCollapsed ? '-10px' : '-24px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              border: '2px solid #0d47a1',
+              background: '#1976d2',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: '1.1em',
+              cursor: 'pointer',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 30,
+              padding: 0,
+              lineHeight: 1,
+            }}
+          >
+            {sidebarCollapsed ? '◀' : '▶'}
+          </button>
+        {!sidebarCollapsed && (
+        <div className="sidebar" style={{ width: '100%', background: '#f7faff', borderLeft: '1px solid #e0e0e0', height: '100%', minHeight: 0, position: 'relative', overflowY: 'auto', overflowX: 'hidden', padding: '20px 10px 10px 16px' }}>
+          <h2>Players</h2>
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="active-list" direction="horizontal">
               {(provided) => (
@@ -741,7 +826,7 @@ function App() {
                           transition: 'background 0.2s',
                           minHeight: '44px',
                           fontSize: '1em',
-                          padding: '0.5em 1em',
+                          padding: '0.45em 0.65em',
                           borderRadius: '10px',
                           boxShadow: '0 1px 6px rgba(44,130,201,0.08)',
                           display: 'flex',
@@ -757,18 +842,18 @@ function App() {
                           <span style={{ fontWeight: 900, color: p.score < 0 ? '#d32f2f' : p.score > 0 ? '#388e3c' : '#222', fontSize: '1.18em' }}>{p.score}</span>
                         </div>
                         {/* Button area (25%) */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'space-between', height: '100%', minWidth: '48px', gap: '6px', marginLeft: '12px' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'space-between', height: '100%', minWidth: '36px', gap: '4px', marginLeft: '8px' }}>
                           <button
                             className="add-inactive-icon"
                             style={{
                               width: '100%',
-                              height: '28px',
+                              height: '24px',
                               background: '#4caf50',
                               color: '#fff',
                               border: 'none',
                               borderRadius: '6px',
                               fontWeight: 700,
-                              fontSize: '1.3em',
+                              fontSize: '1.1em',
                               cursor: 'pointer',
                               marginBottom: '2px',
                               boxShadow: '0 1px 4px rgba(44,130,201,0.10)',
@@ -788,13 +873,13 @@ function App() {
                           <button
                             style={{
                               width: '100%',
-                              height: '28px',
+                              height: '24px',
                               background: '#f44336',
                               color: '#fff',
                               border: 'none',
                               borderRadius: '6px',
                               fontWeight: 700,
-                              fontSize: '1.3em',
+                              fontSize: '1.1em',
                               cursor: 'pointer',
                               marginTop: '2px',
                               boxShadow: '0 1px 4px rgba(44,130,201,0.10)',
@@ -815,41 +900,14 @@ function App() {
                 </Droppable>
               ))}
               <div style={{ textAlign: 'center', marginTop: '1.5em' }}>
-                <button onClick={openPayoutModal} style={{ background: '#1976d2', color: '#fff', fontWeight: 600, fontSize: '1.08em', borderRadius: '8px', padding: '0.6em 1.6em', border: 'none', boxShadow: '0 2px 8px rgba(44,130,201,0.08)', marginBottom: '1em' }}>
+                <button onClick={openPayoutModal} style={{ background: '#1976d2', color: '#fff', fontWeight: 600, fontSize: '1.02em', borderRadius: '8px', padding: '0.5em 1.1em', border: 'none', boxShadow: '0 2px 8px rgba(44,130,201,0.08)', marginBottom: '1em' }}>
                   Calculate Payout
                 </button>
-                <div style={{ marginTop: '0.5em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
-                  <div style={{ width: '100%' }}>
-                    <div style={{ marginTop: '1em', marginBottom: '1em' }}>
-                      <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em', color: '#222', fontSize: '1em' }}>Chu-Chong Multiplier:</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={3}
-                        step={0.5}
-                        value={chuChongMultiplier}
-                        onChange={e => setChuChongMultiplier(Math.max(1, Math.min(3, Number(e.target.value))))}
-                        style={{ width: '60px', background: '#e3f2fd', fontWeight: 600 }}
-                      />
-                    </div>
-                    <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em' }}>Font Size:</label>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.7em' }}>
-                      <input
-                        type="range"
-                        min={1}
-                        max={4}
-                        step={0.05}
-                        value={tableFontSize}
-                        onChange={e => setTableFontSize(Number(e.target.value))}
-                        style={{ verticalAlign: 'middle' }}
-                      />
-                      <span style={{ fontWeight: 500 }}>{tableFontSize.toFixed(2)}em</span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </DragDropContext>
+        </div>
+        )}
         </div>
       </div>
         
