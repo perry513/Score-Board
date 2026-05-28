@@ -34,7 +34,7 @@ function App() {
   const [tableFontSize, setTableFontSize] = useState(() => {
     const saved = Number(localStorage.getItem('table_font_size'));
     if (Number.isFinite(saved)) {
-      return Math.max(1, Math.min(4, saved));
+      return Math.max(1, Math.min(7, saved));
     }
     return 4;
   });
@@ -179,7 +179,13 @@ function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [scoreInput, setScoreInput] = useState(0);
   const scoreInputRef = React.useRef(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar_collapsed');
+    return saved === 'true';
+  });
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', sidebarCollapsed ? 'true' : 'false');
+  }, [sidebarCollapsed]);
   const [toggles, setToggles] = useState(['none', 'none', 'none', 'none']);
   const [selfPick, setSelfPick] = useState(false);
   // Edit game modal state
@@ -197,6 +203,7 @@ function App() {
     }
     return 2;
   });
+
   useEffect(() => {
     localStorage.setItem('chu_chong_multiplier', String(chuChongMultiplier));
   }, [chuChongMultiplier]);
@@ -204,12 +211,19 @@ function App() {
   // Helper functions
   const getActivePlayers = () => players.filter(p => activePlayerIds.includes(p.id));
   const getInactivePlayers = () => players.filter(p => !activePlayerIds.includes(p.id));
+  const getNextPlayerId = (playerList) => {
+    const maxId = playerList.reduce((max, player) => {
+      const numeric = Number.parseInt(String(player.id || '').replace(/^p/, ''), 10);
+      return Number.isFinite(numeric) ? Math.max(max, numeric) : max;
+    }, 0);
+    return `p${maxId + 1}`;
+  };
 
   // Add player
   const addPlayer = () => {
     const name = prompt('Enter new player name:');
     if (!name) return;
-    const newId = 'p' + (players.length + 1);
+    const newId = getNextPlayerId(players);
     setPlayers([...players, { id: newId, name, score: 0 }]);
   };
 
@@ -508,68 +522,66 @@ function App() {
 
   return (
     <div className="mahjong-app" style={{ position: 'relative', height: '100vh', boxSizing: 'border-box', paddingTop: '14px', display: 'flex', flexDirection: 'column' }}>
-      <div className="add-player-container" style={{ gap: '1em', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ position: 'absolute', left: 0 }}>
-          <button className="menu-btn" onClick={() => setMenuOpen(m => !m)} style={{ minWidth: '120px' }}>☰ Menu</button>
+      <div className="add-player-container app-toolbar" style={{ gap: '1em', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div className="toolbar-left-anchor">
+          <button className="menu-btn" onClick={() => setMenuOpen(m => !m)}>☰ Menu</button>
         </div>
-        <button onClick={openModal} style={{ minWidth: '160px', margin: '0 40px' }}>Record Game Score</button>
+        <button className="record-btn" onClick={openModal}>Record Game Score</button>
         {menuOpen && (
-          <div style={{
-            position: 'absolute',
-            top: '2.5em',
-            left: 0,
-            background: '#fff',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
-            minWidth: '220px',
-            padding: '1em',
-            zIndex: 2000
-          }} className="menu-popup">
-            <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { setPlayers(defaultPlayers); setGames([]); setActivePlayerIds(['p1', 'p2', 'p3', 'p4']); setMenuOpen(false); }}>New Game</button>
-            <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { const name = prompt('Enter new player name:'); if (name) setPlayers(players => [...players, { id: 'p' + (players.length + 1), name, score: 0 }]); setMenuOpen(false); }}>Add Player</button>
-            <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { setPlayers(players => players.map(p => ({ ...p, score: 0 }))); setGames([]); setMenuOpen(false); }}>Clear Scores</button>
-            <label htmlFor="menu-score-rule-select" style={{ width: '100%', display: 'block', marginBottom: '0.5em', fontWeight: 600, color: '#1976d2' }}>
-              <span style={{ display: 'block', marginBottom: '0.2em' }}>Score Rule</span>
-              <select
-                id="menu-score-rule-select"
-                value={scoreRule}
-                onChange={e => setScoreRule(e.target.value)}
-                style={{ width: '100%', fontWeight: 700, fontSize: '1em', padding: '0.3em 0.6em', borderRadius: '6px', border: '1px solid #1976d2', background: '#fff', color: '#1976d2' }}
-              >
-                <option value="mahjong">Mahjong</option>
-                <option value="scrabble">Scrabble</option>
-              </select>
-            </label>
-            <div style={{ width: '100%', marginBottom: '0.6em' }}>
-              <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em', color: '#222', fontSize: '1em' }}>Chu-Chong Multiplier:</label>
-              <input
-                type="number"
-                min={1}
-                max={3}
-                step={0.5}
-                value={chuChongMultiplier}
-                onChange={e => setChuChongMultiplier(Math.max(1, Math.min(3, Number(e.target.value))))}
-                style={{ width: '80px', background: '#e3f2fd', fontWeight: 600 }}
-              />
+          <div className="menu-popup menu-popup--floating">
+            <div className="menu-popup-header">
+              <div className="menu-popup-title">Game Controls</div>
+              <div className="menu-popup-subtitle">Quick actions and scoring settings</div>
             </div>
-            <div style={{ width: '100%', marginBottom: '0.7em' }}>
-              <label style={{ fontWeight: 500, display: 'block', marginBottom: '0.3em' }}>Font Size:</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.7em' }}>
+            <div className="menu-popup-actions">
+              <button className="menu-popup-action" onClick={() => { setPlayers(defaultPlayers); setGames([]); setActivePlayerIds(['p1', 'p2', 'p3', 'p4']); setMenuOpen(false); }}>New Game</button>
+              <button className="menu-popup-action" onClick={() => { addPlayer(); setMenuOpen(false); }}>Add Player</button>
+              <button className="menu-popup-action menu-popup-action--warn" onClick={() => { setPlayers(players => players.map(p => ({ ...p, score: 0 }))); setGames([]); setMenuOpen(false); }}>Clear Scores</button>
+            </div>
+            <div className="menu-popup-divider" />
+            <div className="menu-popup-settings">
+              <label htmlFor="menu-score-rule-select" className="menu-popup-label">
+                <span className="menu-popup-label-title">Score Rule</span>
+                <select
+                  className="menu-popup-select"
+                  id="menu-score-rule-select"
+                  value={scoreRule}
+                  onChange={e => setScoreRule(e.target.value)}
+                >
+                  <option value="mahjong">Mahjong</option>
+                  <option value="scrabble">Scrabble</option>
+                </select>
+              </label>
+              <div className="menu-popup-group">
+                <label className="menu-popup-group-label">Chu-Chong Multiplier:</label>
                 <input
-                  type="range"
+                  className="menu-popup-number"
+                  type="number"
                   min={1}
-                  max={4}
-                  step={0.05}
-                  value={tableFontSize}
-                  onChange={e => setTableFontSize(Number(e.target.value))}
-                  style={{ verticalAlign: 'middle', flex: 1 }}
+                  max={3}
+                  step={0.5}
+                  value={chuChongMultiplier}
+                  onChange={e => setChuChongMultiplier(Math.max(1, Math.min(3, Number(e.target.value))))}
                 />
-                <span style={{ fontWeight: 500, minWidth: '58px', textAlign: 'right' }}>{tableFontSize.toFixed(2)}em</span>
+              </div>
+              <div className="menu-popup-group">
+                <label className="menu-popup-group-label">Font Size</label>
+                <div className="menu-popup-range-row">
+                  <input
+                    className="menu-popup-range"
+                    type="range"
+                    min={1}
+                    max={7}
+                    step={0.05}
+                    value={tableFontSize}
+                    onChange={e => setTableFontSize(Number(e.target.value))}
+                  />
+                  <span className="menu-popup-range-value">{tableFontSize.toFixed(2)}em (1-7)</span>
+                </div>
               </div>
             </div>
             <button
-              style={{ width: '100%' }}
+              className="menu-popup-action menu-popup-action--secondary"
               onClick={() => {
                 window.open(mjRulesPdf, '_blank', 'noopener,noreferrer');
                 setMenuOpen(false);
@@ -582,7 +594,7 @@ function App() {
       </div>
       <div className="main-layout" style={{ display: 'flex', alignItems: 'stretch', flex: 1, minHeight: 0 }}>
         <div className="game-grid" style={{ flex: 1, minHeight: 0 }}>
-          <table>
+          <table className="score-table">
             <thead>
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="header-list" direction="horizontal">
@@ -598,34 +610,19 @@ function App() {
                               {...provided.dragHandleProps}
                             >
                               <span
-                                style={{
-                                  cursor: 'pointer',
-                                  textDecoration: 'underline',
-                                  fontWeight: 700,
-                                  color: '#1a5fc2',
-                                  fontSize: `${tableFontSize}em`,
-                                  lineHeight: '1.2',
-                                  display: 'inline-block',
-                                  marginBottom: '2px'
-                                }}
+                                className="score-header-player-name"
+                                style={{ fontSize: `${tableFontSize}em` }}
                                 onClick={() => changePlayerName(p.id)}
                               >
                                 {p.name}
                               </span>
                               <br />
                               <span
-                                className={`score-box${p.score < 0 ? ' negative' : ''}`}
+                                className={`score-box score-header-total${p.score < 0 ? ' negative' : ''}`}
                                 style={{
                                   fontSize: `${tableFontSize * 1.15}em`,
                                   fontWeight: 900,
                                   background: p.score < 0 ? '#ffd6d6' : '#c6f7e2',
-                                  boxShadow: '0 2px 8px rgba(44,130,201,0.08)',
-                                  border: '2px solid #1a5fc2',
-                                  padding: '4px 12px',
-                                  marginTop: '2px',
-                                  display: 'inline-block',
-                                  borderRadius: '8px',
-                                  cursor: 'pointer'
                                 }}
                                 title="Record score for this player"
                                 onClick={() => {
@@ -660,15 +657,16 @@ function App() {
               </DragDropContext>
             </thead>
             <tbody>
-              {[...games].reverse().map((game, idx) => (
-                <tr key={idx}>
-                  <td style={{ cursor: 'pointer', textDecoration: 'underline', color: '#2d7ff9' }} onClick={() => openEditModal(games.length - 1 - idx)}>{game.number}</td>
+              {[...games].reverse().map((game, idx, arr) => {
+                return (
+                  <tr key={idx}>
+                    <td className="game-number-cell" onClick={() => openEditModal(games.length - 1 - idx)}>{game.number}</td>
                     {getActivePlayers().map((p, i) => {
                       if (game.active.includes(p.id)) {
                         const val = game.scores[p.id];
                         return (
                           <td key={p.id}>
-                            <span className={`score-box${val < 0 ? ' negative' : ''}`}
+                            <span className={`score-box score-box-history${val > 0 ? ' positive' : val < 0 ? ' negative' : ''}`}
                               style={{ fontSize: `${tableFontSize}em` }}
                             >{val}</span>
                           </td>
@@ -677,59 +675,42 @@ function App() {
                         return <td key={p.id}>-</td>;
                       }
                     })}
-                  <td>
+                    <td>
                       {(() => {
                         const otherScore = getOtherScoreForGame(game);
                         if (typeof otherScore === 'number') {
-                          return <span className={`score-box${otherScore < 0 ? ' negative' : ''}`}
+                          return <span className={`score-box score-box-history${otherScore > 0 ? ' positive' : otherScore < 0 ? ' negative' : ''}`}
                             style={{ fontSize: `${tableFontSize}em` }}
                           >{otherScore}</span>;
                         }
                         return otherScore;
                       })()}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-        <div style={{ position: 'relative', width: sidebarCollapsed ? '36px' : '260px', height: '100%', flex: '0 0 auto', transition: 'width 0.2s ease' }}>
+        <div className="sidebar-shell" style={{ position: 'relative', width: sidebarCollapsed ? '36px' : '260px', height: '100%', flex: '0 0 auto', transition: 'width 0.2s ease' }}>
           <button
+            className="sidebar-toggle-btn"
             type="button"
             onClick={() => setSidebarCollapsed(v => !v)}
             title={sidebarCollapsed ? 'Expand right pane' : 'Collapse right pane'}
             style={{
-              position: 'absolute',
               left: sidebarCollapsed ? '-10px' : '-24px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              border: '2px solid #0d47a1',
-              background: '#1976d2',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: '1.1em',
-              cursor: 'pointer',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 30,
-              padding: 0,
-              lineHeight: 1,
             }}
           >
             {sidebarCollapsed ? '◀' : '▶'}
           </button>
         {!sidebarCollapsed && (
-        <div className="sidebar" style={{ width: '100%', background: '#f7faff', borderLeft: '1px solid #e0e0e0', height: '100%', minHeight: 0, position: 'relative', overflowY: 'auto', overflowX: 'hidden', padding: '20px 10px 10px 16px' }}>
+        <div className="sidebar sidebar-panel">
           <h2>Players</h2>
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="active-list" direction="horizontal">
               {(provided) => (
-                <div ref={provided.innerRef} {...provided.droppableProps} className="active-list" style={{ display: 'flex', gap: '8px', marginTop: '1em' }}>
+                <div ref={provided.innerRef} {...provided.droppableProps} className="active-list active-list--spaced">
                   {getActivePlayers().map((p, idx) => (
                     <Draggable key={p.id} draggableId={p.id} index={idx}>
                       {(provided) => (
@@ -737,9 +718,8 @@ function App() {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="active-player"
+                          className="active-player active-player-tile"
                           style={{
-                            position: 'relative',
                             ...provided.draggableProps.style,
                           }}
                           onMouseEnter={e => {
@@ -756,28 +736,6 @@ function App() {
                           {/* Remove icon, animated from left, on top of tile */}
                           <span
                             className="remove-active-icon"
-                            style={{
-                              position: 'absolute',
-                              top: '8px',
-                              right: '8px',
-                              opacity: 0,
-                              transform: 'translateX(40px)',
-                              transition: 'opacity 0.2s, transform 0.25s cubic-bezier(0.4,0,0.2,1)',
-                              cursor: 'pointer',
-                              width: '28px',
-                              height: '28px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              borderRadius: '50%',
-                              background: '#f44336',
-                              color: '#fff',
-                              fontWeight: 900,
-                              fontSize: '1.5em',
-                              boxShadow: '0 1px 4px rgba(44,130,201,0.10)',
-                              border: 'none',
-                              zIndex: 2,
-                            }}
                             title="Set player as inactive"
                             onClick={() => {
                               if (activePlayerIds.length <= 2) {
@@ -790,8 +748,8 @@ function App() {
                             &minus;
                           </span>
                           {/* Player tile content, unchanged style */}
-                          <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => changePlayerName(p.id)}>{p.name}</span>
-                          <span style={{ marginLeft: '0.5em', color: '#555', fontSize: '0.95em' }}>({p.score})</span>
+                          <span className="active-player-name" onClick={() => changePlayerName(p.id)}>{p.name}</span>
+                          <span className="active-player-score">({p.score})</span>
                         </div>
                       )}
                     </Draggable>
@@ -802,7 +760,7 @@ function App() {
             </Droppable>
             <div className="inactive-list">
               {getInactivePlayers().map((p, idx) => (
-                <Droppable droppableId={`inactive-${idx}`} key={p.id}>
+                <Droppable droppableId={`inactive-${idx}`} key={`${p.id}-${idx}`}>
                   {(provided, snapshot) => {
                     // Color and size based on score
                     let bg = '#f5f8ff';
@@ -823,44 +781,18 @@ function App() {
                         className="inactive-player"
                         style={{
                           background: snapshot.isDraggingOver ? '#ffe0e0' : bg,
-                          transition: 'background 0.2s',
-                          minHeight: '44px',
-                          fontSize: '1em',
-                          padding: '0.45em 0.65em',
-                          borderRadius: '10px',
-                          boxShadow: '0 1px 6px rgba(44,130,201,0.08)',
-                          display: 'flex',
-                          alignItems: 'center',
                           border,
-                          marginBottom: '0.5em',
-                          position: 'relative',
                         }}
                       >
                         {/* Player info area (75%) */}
-                        <div style={{ flex: 3, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
-                          <span style={{ fontWeight: 700, fontSize: '1.18em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
-                          <span style={{ fontWeight: 900, color: p.score < 0 ? '#d32f2f' : p.score > 0 ? '#388e3c' : '#222', fontSize: '1.18em' }}>{p.score}</span>
+                        <div className="inactive-player-info">
+                          <span className="inactive-player-name">{p.name}</span>
+                          <span className={`inactive-player-score${p.score < 0 ? ' negative' : p.score > 0 ? ' positive' : ''}`}>{p.score}</span>
                         </div>
                         {/* Button area (25%) */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'space-between', height: '100%', minWidth: '36px', gap: '4px', marginLeft: '8px' }}>
+                        <div className="inactive-player-actions">
                           <button
-                            className="add-inactive-icon"
-                            style={{
-                              width: '100%',
-                              height: '24px',
-                              background: '#4caf50',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontWeight: 700,
-                              fontSize: '1.1em',
-                              cursor: 'pointer',
-                              marginBottom: '2px',
-                              boxShadow: '0 1px 4px rgba(44,130,201,0.10)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
+                            className="inactive-player-action-btn add-inactive-icon"
                             title="Add player back to game"
                             onClick={() => {
                               if (!activePlayerIds.includes(p.id)) {
@@ -871,22 +803,7 @@ function App() {
                             +
                           </button>
                           <button
-                            style={{
-                              width: '100%',
-                              height: '24px',
-                              background: '#f44336',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontWeight: 700,
-                              fontSize: '1.1em',
-                              cursor: 'pointer',
-                              marginTop: '2px',
-                              boxShadow: '0 1px 4px rgba(44,130,201,0.10)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
+                            className="inactive-player-action-btn remove-inactive-icon"
                             title="Remove player"
                             onClick={() => removePlayer(p.id)}
                           >
@@ -899,8 +816,8 @@ function App() {
                   }}
                 </Droppable>
               ))}
-              <div style={{ textAlign: 'center', marginTop: '1.5em' }}>
-                <button onClick={openPayoutModal} style={{ background: '#1976d2', color: '#fff', fontWeight: 600, fontSize: '1.02em', borderRadius: '8px', padding: '0.5em 1.1em', border: 'none', boxShadow: '0 2px 8px rgba(44,130,201,0.08)', marginBottom: '1em' }}>
+              <div className="payout-wrap">
+                <button className="payout-btn" onClick={openPayoutModal}>
                   Calculate Payout
                 </button>
               </div>
@@ -910,14 +827,19 @@ function App() {
         )}
         </div>
       </div>
+
+      <div className="mobile-quickbar" aria-label="Quick actions">
+        <button className="mobile-quickbar-btn" onClick={() => setMenuOpen(m => !m)}>Menu</button>
+        <button className="mobile-quickbar-btn mobile-quickbar-btn--primary" onClick={openModal}>Record Score</button>
+      </div>
         
-  <Modal isOpen={modalOpen} onRequestClose={closeModal} ariaHideApp={false} style={{ content: { position: 'relative', minHeight: '380px' } }}>
-  <h2>Record Game Score</h2>
+  <Modal isOpen={modalOpen} onRequestClose={closeModal} ariaHideApp={false} className="modal-card modal-card--score" overlayClassName="modal-overlay" style={{ content: { position: 'relative', minHeight: '380px' } }}>
+  <h2 className="modal-title">Record Game Score</h2>
   {/* Scrabble rule: per-player score entry, no Chu-Chong button */}
   {scoreRule === 'scrabble' && scrabblePopup ? (
     <div
+      className="modal-panel modal-focus-capture"
       tabIndex={0}
-      style={{ outline: 'none' }}
       onKeyDown={e => {
         const active = getActivePlayers();
         // Find focused input index
@@ -955,18 +877,18 @@ function App() {
         }
       }}
     >
-      <div style={{ marginTop: '1em', marginBottom: '1em', display: 'flex', flexWrap: 'wrap', gap: '1em', justifyContent: 'center' }}>
+      <div className="scrabble-grid">
         {getActivePlayers().map((p, idx) => (
-          <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '120px' }}>
-            <span style={{ fontWeight: 700, marginBottom: '0.3em' }}>{p.name}</span>
+          <div key={p.id} className="scrabble-entry">
+            <span className="scrabble-entry-name">{p.name}</span>
             <input
+              className="scrabble-entry-input"
               type="number"
               value={scrabbleRoundScores[p.id] !== undefined ? scrabbleRoundScores[p.id] : ''}
               onChange={e => {
                 const val = e.target.value;
                 setScrabbleRoundScores(scores => ({ ...scores, [p.id]: val === '' ? '' : Number(val) }));
               }}
-              style={{ background: '#ffffcc', width: '80px', textAlign: 'center', fontWeight: 600, fontSize: '1.1em', borderRadius: '8px', border: '1px solid #bbb' }}
               placeholder="Score"
               tabIndex={idx}
               ref={el => scrabbleInputRefs.current[idx] = el}
@@ -975,8 +897,9 @@ function App() {
           </div>
         ))}
       </div>
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '2em', marginBottom: '0.5em' }}>
+      <div className="modal-actions modal-actions--stack">
         <button
+          className="modal-submit-btn"
           id="scrabble-submit-btn"
           onClick={() => {
             // Validate all players have a score
@@ -1000,28 +923,30 @@ function App() {
             setScrabblePopup(false);
             setModalOpen(false);
           }}
-          style={{ fontSize: '1.4em', padding: '0.6em 2.5em', borderRadius: '10px', fontWeight: 700, background: '#1976d2', color: '#fff', marginBottom: '1em', boxShadow: '0 2px 8px rgba(44,130,201,0.10)' }}
         >Submit</button>
-        <div style={{ display: 'flex', gap: '1em' }}>
-          <button onClick={() => { setModalOpen(false); setScrabblePopup(false); setScrabbleRoundScores({}); }} style={{ fontSize: '1em', padding: '0.4em 1.5em', borderRadius: '8px', background: '#eee', color: '#333', fontWeight: 600 }}>Cancel</button>
-          <button onClick={() => setScrabbleRoundScores({})} style={{ fontSize: '1em', padding: '0.4em 1.5em', borderRadius: '8px', background: '#eee', color: '#333', fontWeight: 600 }}>Clear</button>
+        <div className="modal-actions-row">
+          <button className="modal-neutral-btn" onClick={() => { setModalOpen(false); setScrabblePopup(false); setScrabbleRoundScores({}); }}>Cancel</button>
+          <button className="modal-neutral-btn" onClick={() => setScrabbleRoundScores({})}>Clear</button>
         </div>
       </div>
     </div>
   ) : (
     // Mahjong rule: original popup
-    <div onKeyDown={e => { if (e.key === 'Enter') handleScoreSubmit(); }} tabIndex={0} style={{ outline: 'none' }}>
-      <div style={{ marginBottom: '1em', display: 'flex', alignItems: 'center', gap: '1em' }}>
-        <label>Score: <input
+    <div className="modal-panel modal-focus-capture" onKeyDown={e => { if (e.key === 'Enter') handleScoreSubmit(); }} tabIndex={0}>
+      <div className="modal-score-row modal-score-row-gap modal-score-emphasis">
+        <label className="modal-score-label">Score Entry
+          <input
+          className="modal-score-input modal-score-input-hero"
           type="number"
           value={scoreInput}
           ref={scoreInputRef}
           onChange={e => setScoreInput(Number(e.target.value))}
           onClick={e => e.target.select()}
-          style={{ background: '#ffffcc' }}
           tabIndex={0}
-        /></label>
+          />
+        </label>
         <button
+          className="modal-toggle-btn modal-mode-toggle"
           type="button"
           tabIndex={1}
           onClick={() => {
@@ -1046,19 +971,14 @@ function App() {
             marginLeft: '0.5em',
             background: selfPick ? '#1976d2' : '#e0e0e0',
             color: selfPick ? '#fff' : '#333',
-            border: '1px solid #ccc',
-            borderRadius: '6px',
-            padding: '0.3em 1em',
-            fontWeight: 500,
-            cursor: 'pointer',
-            minWidth: '90px'
+            minWidth: '90px',
           }}
         >
           {selfPick ? '自摸 (Self-pick)' : '出冲 (Chu-Chong)'}
         </button>
       </div>
-      <div style={{ marginTop: '1em' }}>
-        <div style={{ display: 'flex', gap: '1em', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1em' }}>
+      <div className="modal-section-top-gap">
+        <div className="modal-toggle-grid">
           {getActivePlayers().map((p, idx) => {
             let bg = '#e0e0e0';
             let color = '#333';
@@ -1071,46 +991,33 @@ function App() {
             }
             return (
               <button
+                className="modal-toggle-player-btn"
                 key={p.id}
                 type="button"
                 tabIndex={2 + idx}
                 onClick={() => handleToggle(idx)}
                 style={{
-                  minWidth: '120px',
-                  minHeight: '56px',
                   background: bg,
                   color,
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(44,130,201,0.10)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '1.15em',
-                  cursor: 'pointer',
-                  border: '2px solid #bbb',
-                  marginBottom: '0.5em',
-                  padding: '0.5em 1em',
                 }}
                 title={`Toggle win/lose/none for ${p.name}`}
               >
-                <span style={{ textDecoration: 'underline' }}>{p.name}</span>
-                <span style={{ marginTop: '0.3em', fontWeight: 600, fontSize: '1em', textTransform: 'capitalize' }}>{toggles[idx]}</span>
+                <span className="modal-toggle-player-name">{p.name}</span>
+                <span className="modal-toggle-player-state">{toggles[idx]}</span>
               </button>
             );
           })}
         </div>
       </div>
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '2em', marginBottom: '0.5em' }}>
-        <button onClick={handleScoreSubmit} style={{ fontSize: '1.4em', padding: '0.6em 2.5em', borderRadius: '10px', fontWeight: 700, background: '#1976d2', color: '#fff', marginBottom: '1em', boxShadow: '0 2px 8px rgba(44,130,201,0.10)' }}>Submit</button>
-        <div style={{ display: 'flex', gap: '1em' }}>
-          <button onClick={closeModal} style={{ fontSize: '1em', padding: '0.4em 1.5em', borderRadius: '8px', background: '#eee', color: '#333', fontWeight: 600 }}>Cancel</button>
+      <div className="modal-actions modal-actions--stack">
+        <button className="modal-submit-btn" onClick={handleScoreSubmit}>Submit</button>
+        <div className="modal-actions-row">
+          <button className="modal-neutral-btn" onClick={closeModal}>Cancel</button>
           <button onClick={() => {
             setScoreInput(0);
             setToggles(['none', 'none', 'none', 'none']);
             setSelfPick(false);
-          }} style={{ fontSize: '1em', padding: '0.4em 1.5em', borderRadius: '8px', background: '#eee', color: '#333', fontWeight: 600 }}>Clear</button>
+          }} className="modal-neutral-btn">Clear</button>
         </div>
       </div>
     </div>
@@ -1118,10 +1025,11 @@ function App() {
       </Modal>
         {/* Edit previous game modal */}
       {/* Calculate payout modal */}
-      <Modal isOpen={payoutModalOpen} onRequestClose={closePayoutModal} ariaHideApp={false} style={{ content: { minWidth: '340px', minHeight: '320px', maxWidth: '420px', margin: 'auto', borderRadius: '12px' } }}>
-        <h2>Calculate Payout</h2>
-        <div style={{ marginBottom: '1em' }}>
+      <Modal isOpen={payoutModalOpen} onRequestClose={closePayoutModal} ariaHideApp={false} className="modal-card modal-card--payout" overlayClassName="modal-overlay" style={{ content: { minWidth: '340px', minHeight: '320px', maxWidth: '420px', margin: 'auto', borderRadius: '12px' } }}>
+        <h2 className="modal-title">Calculate Payout</h2>
+        <div className="payout-rate-row">
           <label>Rate: <input
+            className="modal-score-input payout-rate-input"
             type="number"
             value={payoutRate}
             ref={payoutRateInputRef}
@@ -1131,15 +1039,14 @@ function App() {
               const val = Number(e.target.value);
               setPayoutRate(val > 0 ? val : 1);
             }}
-            style={{ background: '#ffffcc', width: '80px', marginLeft: '0.5em' }}
           /></label>
           {payoutRate === 0 && (
-            <div style={{ color: 'red', marginTop: '0.5em' }}>
+            <div className="payout-rate-error">
               Payout rate cannot be zero.
             </div>
           )}
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1em' }}>
+        <table className="payout-table">
           <thead>
             <tr>
               <th style={{ textAlign: 'left', fontWeight: 600, fontSize: '1.1em' }}>Player</th>
@@ -1169,22 +1076,23 @@ function App() {
             })}
           </tbody>
         </table>
-        <div style={{ textAlign: 'center' }}>
-          <button onClick={closePayoutModal} style={{ minWidth: '100px' }}>Close</button>
+        <div className="payout-close-wrap">
+          <button className="payout-close-btn" onClick={closePayoutModal}>Close</button>
         </div>
       </Modal>
-        <Modal isOpen={editModalOpen} onRequestClose={closeEditModal} ariaHideApp={false}>
-          <h2>Edit Game #{editGameIdx !== null ? games[editGameIdx].number : ''}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1em', marginBottom: '1em' }}>
+        <Modal isOpen={editModalOpen} onRequestClose={closeEditModal} ariaHideApp={false} className="modal-card modal-card--edit" overlayClassName="modal-overlay">
+          <h2 className="modal-title">Edit Game #{editGameIdx !== null ? games[editGameIdx].number : ''}</h2>
+          <div className="modal-score-row modal-score-row-gap">
             <label>Score: <input
+              className="modal-score-input"
               type="number"
               value={editScoreInput}
               ref={editScoreInputRef}
               onChange={e => setEditScoreInput(Number(e.target.value))}
               onClick={e => e.target.select()}
-              style={{ background: '#ffffcc' }}
             /></label>
             <button
+              className="modal-toggle-btn"
               type="button"
               onClick={() => {
                 setEditSelfPick(sp => {
@@ -1208,18 +1116,13 @@ function App() {
                 marginLeft: '0.5em',
                 background: editSelfPick ? '#1976d2' : '#e0e0e0',
                 color: editSelfPick ? '#fff' : '#333',
-                border: '1px solid #ccc',
-                borderRadius: '6px',
-                padding: '0.3em 1em',
-                fontWeight: 500,
-                cursor: 'pointer',
-                minWidth: '90px'
+                minWidth: '90px',
               }}
             >
               {editSelfPick ? '自摸 (Self-pick)' : '出冲 (Chu-Chong)'}
             </button>
           </div>
-          <div style={{ marginTop: '1em' }}>
+          <div className="modal-section-top-gap">
             {editGameIdx !== null && games[editGameIdx] && players.filter(p => games[editGameIdx].active.includes(p.id)).map((p, idx) => {
               let label = '';
               if (editToggles[idx] === 'win') {
@@ -1228,32 +1131,30 @@ function App() {
                 label = editSelfPick ? -editScoreInput : (editToggles.filter(t => t === 'lose').length === 3 ? -editScoreInput : -editScoreInput * chuChongMultiplier);
               }
               return (
-                <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '120px 90px 1fr', alignItems: 'center', gap: '0.5em', marginBottom: '0.5em' }}>
-                  <span style={{ cursor: 'pointer', textDecoration: 'underline', justifySelf: 'start', textAlign: 'left', fontWeight: 500 }} onClick={() => changePlayerName(p.id)}>{p.name}</span>
+                <div key={p.id} className="edit-player-row">
+                  <span className="edit-player-name" onClick={() => changePlayerName(p.id)}>{p.name}</span>
                   <button 
+                    className="edit-toggle-btn"
                     onClick={() => handleEditToggle(idx)}
                     style={{
                       width: '90px',
                       background: editToggles[idx] === 'win' ? '#4caf50' : editToggles[idx] === 'lose' ? '#f44336' : undefined,
                       color: editToggles[idx] === 'win' || editToggles[idx] === 'lose' ? '#fff' : undefined,
-                      fontWeight: 600,
-                      borderRadius: '6px',
-                      border: '1px solid #ccc',
-                      padding: '0.3em 0',
-                      textTransform: 'capitalize',
-                      justifySelf: 'center'
+                      justifySelf: 'center',
                     }}
                   >
                     {editToggles[idx]}
                   </button>
-                  <span style={{ justifySelf: 'start', minWidth: '40px', textAlign: 'left' }}>{label !== '' ? label : ''}</span>
+                  <span className="edit-player-label">{label !== '' ? label : ''}</span>
                 </div>
               );
             })}
           </div>
-          <button onClick={handleEditScoreSubmit} style={{ marginTop: '1em' }}>Save</button>
-          <button onClick={closeEditModal} style={{ marginLeft: '1em' }}>Cancel</button>
-          <div tabIndex={0} onKeyDown={handleEditModalKeyDown} style={{ outline: 'none' }} />
+          <div className="modal-actions-row modal-actions-row-top">
+            <button onClick={handleEditScoreSubmit}>Save</button>
+            <button className="modal-btn-shift" onClick={closeEditModal}>Cancel</button>
+          </div>
+          <div className="modal-focus-capture" tabIndex={0} onKeyDown={handleEditModalKeyDown} />
         </Modal>
     </div>
   );
