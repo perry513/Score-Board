@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import Modal from 'react-modal';
 import mjRulesPdf from './assets/mjRules.pdf';
@@ -44,6 +44,8 @@ function App() {
   // Payout modal state
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [payoutRate, setPayoutRate] = useState(1);
+  const [hoveredRound, setHoveredRound] = useState(null);
+  const [hoveredChartX, setHoveredChartX] = useState(null);
   const payoutRateInputRef = React.useRef(null);
 
   const openPayoutModal = () => {
@@ -83,6 +85,7 @@ function App() {
   };
   
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeView, setActiveView] = useState('board');
   // Click-away to close menu
   useEffect(() => {
     if (!menuOpen) return;
@@ -495,6 +498,131 @@ function App() {
     return notCurrentlyActive.length > 0 ? sum : '-';
   };
 
+  const summary = useMemo(() => {
+    const colorPalette = ['#1f77b4', '#2ca02c', '#d62728', '#ff7f0e', '#17becf', '#8c564b', '#bcbd22', '#e377c2'];
+    const summaryPlayers = players.filter(p => activePlayerIds.includes(p.id));
+    const statsById = {};
+
+    summaryPlayers.forEach((p, idx) => {
+      statsById[p.id] = {
+        id: p.id,
+        name: p.name,
+        wins: 0,
+        losses: 0,
+        selfPickWins: 0,
+        selfPickLosses: 0,
+        chuChongWins: 0,
+        chuChongLosses: 0,
+        best: Number.NEGATIVE_INFINITY,
+        worst: Number.POSITIVE_INFINITY,
+        playedRounds: 0,
+        cumulative: 0,
+        series: [],
+        color: colorPalette[idx % colorPalette.length],
+      };
+    });
+
+    let selfPickCount = 0;
+    let chuChongCount = 0;
+
+    games.forEach((game, roundIdx) => {
+      if (scoreRule === 'mahjong') {
+        if (game.selfPick) {
+          selfPickCount += 1;
+        } else {
+          chuChongCount += 1;
+        }
+      }
+
+      summaryPlayers.forEach(p => {
+        const info = statsById[p.id];
+        const played = game.active.includes(p.id);
+        const delta = played ? Number(game.scores?.[p.id] || 0) : 0;
+
+        if (game.active.includes(p.id)) {
+          info.playedRounds += 1;
+          if (delta > 0) info.wins += 1;
+          if (delta < 0) info.losses += 1;
+          if (scoreRule === 'mahjong') {
+            if (game.selfPick) {
+              if (delta > 0) info.selfPickWins += 1;
+              if (delta < 0) info.selfPickLosses += 1;
+            } else {
+              if (delta > 0) info.chuChongWins += 1;
+              if (delta < 0) info.chuChongLosses += 1;
+            }
+          }
+          info.best = Math.max(info.best, delta);
+          info.worst = Math.min(info.worst, delta);
+        }
+
+        info.cumulative += delta;
+        info.series.push({ x: roundIdx + 1, y: info.cumulative, delta, played });
+      });
+    });
+
+    const playerRows = summaryPlayers.map(p => {
+      const info = statsById[p.id];
+      const winRate = info.playedRounds > 0 ? (info.wins / info.playedRounds) * 100 : 0;
+      return {
+        ...info,
+        winRate,
+        best: info.best === Number.NEGATIVE_INFINITY ? 0 : info.best,
+        worst: info.worst === Number.POSITIVE_INFINITY ? 0 : info.worst,
+      };
+    });
+
+    return {
+      totalRounds: games.length,
+      selfPickCount,
+      chuChongCount,
+      playerRows,
+    };
+  }, [players, activePlayerIds, games, scoreRule]);
+
+  const renderLinePath = (series, totalRounds, minY, maxY) => {
+    if (!series.length) return '';
+    const width = 900;
+    const height = 280;
+    const padX = 48;
+    const padY = 24;
+    const yRange = Math.max(1, maxY - minY);
+
+    const toX = (round) => {
+      if (totalRounds <= 1) return padX;
+      return padX + ((round - 1) / (totalRounds - 1)) * (width - padX * 2);
+    };
+    const toY = (value) => padY + ((maxY - value) / yRange) * (height - padY * 2);
+
+    return series.map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${toX(point.x)} ${toY(point.y)}`).join(' ');
+  };
+
+  const getChartHoverData = (event, totalRounds) => {
+    const width = 900;
+    const padX = 48;
+    const svg = event.currentTarget;
+    if (!svg || totalRounds < 1) return null;
+
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const svgPoint = point.matrixTransform(ctm.inverse());
+    const clampedX = Math.max(padX, Math.min(width - padX, svgPoint.x));
+
+    if (totalRounds <= 1) {
+      return { round: 1, x: padX };
+    }
+
+    const round = Math.round(((clampedX - padX) / (width - padX * 2)) * (totalRounds - 1) + 1);
+    return {
+      round: Math.max(1, Math.min(totalRounds, round)),
+      x: clampedX,
+    };
+  };
+
   useEffect(() => {
     const handleShortcut = (e) => {
       if (e.ctrlKey && e.key === '`') {
@@ -512,7 +640,18 @@ function App() {
         <div style={{ position: 'absolute', left: 0 }}>
           <button className="menu-btn" onClick={() => setMenuOpen(m => !m)} style={{ minWidth: '120px' }}>☰ Menu</button>
         </div>
-        <button onClick={openModal} style={{ minWidth: '160px', margin: '0 40px' }}>Record Game Score</button>
+        <button
+          onClick={() => {
+            if (activeView === 'summary') {
+              setActiveView('board');
+              return;
+            }
+            openModal();
+          }}
+          style={{ minWidth: '180px', margin: '0 40px' }}
+        >
+          {activeView === 'summary' ? 'Back To Scoreboard' : 'Record Game Score'}
+        </button>
         {menuOpen && (
           <div style={{
             position: 'absolute',
@@ -529,6 +668,15 @@ function App() {
             <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { setPlayers(defaultPlayers); setGames([]); setActivePlayerIds(['p1', 'p2', 'p3', 'p4']); setMenuOpen(false); }}>New Game</button>
             <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { const name = prompt('Enter new player name:'); if (name) setPlayers(players => [...players, { id: 'p' + (players.length + 1), name, score: 0 }]); setMenuOpen(false); }}>Add Player</button>
             <button style={{ width: '100%', marginBottom: '0.5em' }} onClick={() => { setPlayers(players => players.map(p => ({ ...p, score: 0 }))); setGames([]); setMenuOpen(false); }}>Clear Scores</button>
+            <button
+              style={{ width: '100%', marginBottom: '0.5em' }}
+              onClick={() => {
+                setActiveView('summary');
+                setMenuOpen(false);
+              }}
+            >
+              View Summary
+            </button>
             <label htmlFor="menu-score-rule-select" style={{ width: '100%', display: 'block', marginBottom: '0.5em', fontWeight: 600, color: '#1976d2' }}>
               <span style={{ display: 'block', marginBottom: '0.2em' }}>Score Rule</span>
               <select
@@ -580,7 +728,7 @@ function App() {
           </div>
         )}
       </div>
-      <div className="main-layout" style={{ display: 'flex', alignItems: 'stretch', flex: 1, minHeight: 0 }}>
+      <div className="main-layout" style={{ display: activeView === 'board' ? 'flex' : 'none', alignItems: 'stretch', flex: 1, minHeight: 0 }}>
         <div className="game-grid" style={{ flex: 1, minHeight: 0 }}>
           <table>
             <thead>
@@ -910,6 +1058,206 @@ function App() {
         )}
         </div>
       </div>
+
+      {activeView === 'summary' && (
+        <div className="summary-view">
+          <div className="summary-header">
+            <h2>Game Summary</h2>
+            <span className="summary-rule-badge">Rule: {scoreRule === 'mahjong' ? 'Mahjong' : 'Scrabble'}</span>
+          </div>
+
+          <div className="summary-cards">
+            <div className="summary-card">
+              <div className="summary-label">Total Rounds</div>
+              <div className="summary-value">{summary.totalRounds}</div>
+            </div>
+            {scoreRule === 'mahjong' && (
+              <>
+                <div className="summary-card">
+                  <div className="summary-label">Self-Pick Rounds</div>
+                  <div className="summary-value">{summary.selfPickCount}</div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-label">Chu-Chong Rounds</div>
+                  <div className="summary-value">{summary.chuChongCount}</div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="summary-table-wrap">
+            <table className="summary-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Win</th>
+                  <th>Loss</th>
+                  <th>Win Rate</th>
+                  <th>Best Round</th>
+                  <th>Worst Round</th>
+                  <th>Current Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.playerRows.map(row => (
+                  <tr key={row.id}>
+                    <td style={{ fontWeight: 700 }}>{row.name}</td>
+                    <td>
+                      <div>{row.wins}</div>
+                      {scoreRule === 'mahjong' && (
+                        <div className="summary-split-meta">SP {row.selfPickWins} | CC {row.chuChongWins}</div>
+                      )}
+                    </td>
+                    <td>
+                      <div>{row.losses}</div>
+                      {scoreRule === 'mahjong' && (
+                        <div className="summary-split-meta">SP {row.selfPickLosses} | CC {row.chuChongLosses}</div>
+                      )}
+                    </td>
+                    <td>{row.winRate.toFixed(1)}%</td>
+                    <td>
+                      <span className={`score-box${row.best < 0 ? ' negative' : ''}`}>{row.best}</span>
+                    </td>
+                    <td>
+                      <span className={`score-box${row.worst < 0 ? ' negative' : ''}`}>{row.worst}</span>
+                    </td>
+                    <td>
+                      <span className={`score-box${row.cumulative < 0 ? ' negative' : ''}`}>{row.cumulative}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="summary-chart-wrap">
+            <h3>Cumulative Score By Round</h3>
+            {summary.totalRounds === 0 ? (
+              <div className="summary-empty">No rounds recorded yet.</div>
+            ) : (
+              <>
+                {(() => {
+                  const selectedRound = hoveredRound ?? summary.totalRounds;
+                  return (
+                    <div className="summary-chart-layout">
+                      <div className="summary-chart-main">
+                        <div className="summary-chart-scroller">
+                          {(() => {
+                            const width = 900;
+                            const height = 280;
+                            const padX = 48;
+                            const padY = 24;
+                            const allValues = summary.playerRows.flatMap(row => row.series.map(point => point.y));
+                            const minY = Math.min(0, ...allValues);
+                            const maxY = Math.max(0, ...allValues);
+                            const yRange = Math.max(1, maxY - minY);
+                            const toX = (round) => {
+                              if (summary.totalRounds <= 1) return padX;
+                              return padX + ((round - 1) / (summary.totalRounds - 1)) * (width - padX * 2);
+                            };
+                            const toY = (value) => padY + ((maxY - value) / yRange) * (height - padY * 2);
+
+                            return (
+                              <svg
+                                viewBox={`0 0 ${width} ${height}`}
+                                className="summary-chart"
+                                role="img"
+                                aria-label="Cumulative score by round"
+                                onMouseMove={(e) => {
+                                  const hover = getChartHoverData(e, summary.totalRounds);
+                                  setHoveredRound(hover?.round ?? null);
+                                  setHoveredChartX(hover?.x ?? null);
+                                }}
+                                onMouseLeave={() => {
+                                  setHoveredRound(null);
+                                  setHoveredChartX(null);
+                                }}
+                              >
+                                <line x1={padX} y1={toY(0)} x2={width - padX} y2={toY(0)} stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="4 4" />
+                                {selectedRound !== null && (
+                                  <line
+                                    x1={hoveredChartX ?? toX(selectedRound)}
+                                    y1={padY}
+                                    x2={hoveredChartX ?? toX(selectedRound)}
+                                    y2={height - padY}
+                                    stroke="#334155"
+                                    strokeWidth="1.2"
+                                    strokeDasharray="5 4"
+                                  />
+                                )}
+                                {summary.playerRows.map(row => (
+                                  <g key={row.id}>
+                                    <path
+                                      d={renderLinePath(row.series, summary.totalRounds, minY, maxY)}
+                                      fill="none"
+                                      stroke={row.color}
+                                      strokeWidth="3"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                    {row.series.map(point => (
+                                      <circle
+                                        key={`${row.id}-${point.x}`}
+                                        className="summary-chart-point"
+                                        cx={toX(point.x)}
+                                        cy={toY(point.y)}
+                                        r={selectedRound === point.x ? '7' : '5'}
+                                        fill={row.color}
+                                      >
+                                        <title>
+                                          {`${row.name} | Round ${point.x} | Round result: ${point.played ? point.delta : 'DNP'} | Total: ${point.y}`}
+                                        </title>
+                                      </circle>
+                                    ))}
+                                  </g>
+                                ))}
+                              </svg>
+                            );
+                          })()}
+                        </div>
+                        <div className="summary-legend">
+                          {summary.playerRows.map(row => (
+                            <div key={row.id} className="summary-legend-item">
+                              <span className="summary-legend-dot" style={{ background: row.color }} />
+                              <span>{row.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="summary-round-tooltip" role="status" aria-live="polite">
+                        <div className="summary-round-tooltip-title">
+                          Round {selectedRound} Results
+                          {hoveredRound === null && <span className="summary-round-tooltip-help"> (hover chart to inspect other rounds)</span>}
+                        </div>
+                        <div className="summary-round-tooltip-grid">
+                          {summary.playerRows.map(row => {
+                            const point = row.series[selectedRound - 1];
+                            const roundResult = point?.played ? point.delta : 'DNP';
+                            return (
+                              <div key={`round-${selectedRound}-${row.id}`} className="summary-round-tooltip-row">
+                                <span className="summary-round-player">
+                                  <span className="summary-legend-dot" style={{ background: row.color }} />
+                                  {row.name}
+                                </span>
+                                <span className={`score-box${typeof roundResult === 'number' && roundResult < 0 ? ' negative' : ''}`}>
+                                  {roundResult}
+                                </span>
+                                <span className={`score-box${(point?.y || 0) < 0 ? ' negative' : ''}`}>{point?.y ?? 0}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="summary-round-tooltip-help">Values: round result, cumulative total</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+          </div>
+        </div>
+      )}
         
   <Modal isOpen={modalOpen} onRequestClose={closeModal} ariaHideApp={false} style={{ content: { position: 'relative', minHeight: '380px' } }}>
   <h2>Record Game Score</h2>
