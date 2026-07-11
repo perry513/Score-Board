@@ -705,6 +705,13 @@ function App() {
           <span className="toolbar-status-pill">Games: {games.length}</span>
           <span className="toolbar-status-pill">Time: {formattedCurrentTime}</span>
         </div>
+        {activeView === 'summary' && (
+          <div className="toolbar-right-anchor">
+            <button className="record-btn toolbar-back-btn" onClick={() => setActiveView('board')}>
+              Back To Scoreboard
+            </button>
+          </div>
+        )}
         {menuOpen && (
           <div className="menu-popup menu-popup--floating">
             <div className="menu-popup-header">

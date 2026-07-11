@@ -67,6 +67,17 @@ body {
   left: 0;
 }
 
+.toolbar-right-anchor {
+  position: absolute;
+  right: 0;
+}
+
+.toolbar-back-btn {
+  margin: 0;
+  min-width: 190px;
+  min-height: 44px;
+}
+
 .toolbar-center-status {
   display: flex;
   align-items: center;
