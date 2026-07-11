@@ -14,6 +14,7 @@ const defaultPlayers = [
   { id: 'p6', name: 'Player 6', score: 0 },
 ];
 const defaultGames = [];
+const WIND_LABELS = ['東', '南', '西', '北'];
 
 function App() {
       // For Scrabble popup input refs
@@ -47,7 +48,19 @@ function App() {
   const [activeView, setActiveView] = useState('board');
   const [hoveredRound, setHoveredRound] = useState(null);
   const [hoveredChartX, setHoveredChartX] = useState(null);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmModalTitle, setConfirmModalTitle] = useState('Please Confirm');
+  const [confirmModalMessage, setConfirmModalMessage] = useState('');
+  const confirmActionRef = React.useRef(null);
   const payoutRateInputRef = React.useRef(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const openPayoutModal = () => {
     setPayoutModalOpen(true);
@@ -214,6 +227,47 @@ function App() {
   // Helper functions
   const getActivePlayers = () => players.filter(p => activePlayerIds.includes(p.id));
   const getInactivePlayers = () => players.filter(p => !activePlayerIds.includes(p.id));
+  const openConfirmModal = ({ title, message, onConfirm }) => {
+    setConfirmModalTitle(title || 'Please Confirm');
+    setConfirmModalMessage(message || 'Are you sure?');
+    confirmActionRef.current = typeof onConfirm === 'function' ? onConfirm : null;
+    setConfirmModalOpen(true);
+  };
+  const closeConfirmModal = () => {
+    setConfirmModalOpen(false);
+    confirmActionRef.current = null;
+  };
+  const handleConfirmProceed = () => {
+    const action = confirmActionRef.current;
+    closeConfirmModal();
+    if (typeof action === 'function') {
+      action();
+    }
+  };
+  const getWindForPlayer = (playerId) => {
+    const idx = activePlayerIds.indexOf(playerId);
+    return idx >= 0 && idx < WIND_LABELS.length ? WIND_LABELS[idx] : null;
+  };
+  const rollForWinds = ({ askConfirmation = true } = {}) => {
+    if (activePlayerIds.length !== 4) {
+      alert('Roll for winds requires exactly 4 active players.');
+      return;
+    }
+    if (askConfirmation) {
+      openConfirmModal({
+        title: 'Confirm Wind Roll',
+        message: 'Roll for seats 東南西北 now?',
+        onConfirm: () => rollForWinds({ askConfirmation: false }),
+      });
+      return;
+    }
+    const shuffled = [...activePlayerIds];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    setActivePlayerIds(shuffled);
+  };
   const getNextPlayerId = (playerList) => {
     const maxId = playerList.reduce((max, player) => {
       const numeric = Number.parseInt(String(player.id || '').replace(/^p/, ''), 10);
@@ -593,6 +647,14 @@ function App() {
     };
   }, [players, activePlayerIds, games, scoreRule]);
 
+  const formattedCurrentTime = useMemo(() => {
+    return currentTime.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  }, [currentTime]);
+
   const renderLinePath = (series, totalRounds, minY, maxY) => {
     if (!series.length) return '';
     const width = 900;
@@ -639,18 +701,10 @@ function App() {
         <div className="toolbar-left-anchor">
           <button className="menu-btn" onClick={() => setMenuOpen(m => !m)}>☰ Menu</button>
         </div>
-        <button
-          className="record-btn"
-          onClick={() => {
-            if (activeView === 'summary') {
-              setActiveView('board');
-              return;
-            }
-            openModal();
-          }}
-        >
-          {activeView === 'summary' ? 'Back To Scoreboard' : 'Record Game Score'}
-        </button>
+        <div className="toolbar-center-status">
+          <span className="toolbar-status-pill">Games: {games.length}</span>
+          <span className="toolbar-status-pill">Time: {formattedCurrentTime}</span>
+        </div>
         {menuOpen && (
           <div className="menu-popup menu-popup--floating">
             <div className="menu-popup-header">
@@ -658,9 +712,23 @@ function App() {
               <div className="menu-popup-subtitle">Quick actions and scoring settings</div>
             </div>
             <div className="menu-popup-actions">
-              <button className="menu-popup-action" onClick={() => { setPlayers(defaultPlayers); setGames([]); setActivePlayerIds(['p1', 'p2', 'p3', 'p4']); setMenuOpen(false); }}>New Game</button>
+              <button className="menu-popup-action" onClick={() => {
+                setPlayers(defaultPlayers);
+                setGames([]);
+                setActivePlayerIds(['p1', 'p2', 'p3', 'p4']);
+                setActiveView('board');
+                setMenuOpen(false);
+                setTimeout(() => {
+                  openConfirmModal({
+                    title: 'New Game',
+                    message: 'A new game has started. Roll for seats 東南西北 now?',
+                    onConfirm: () => rollForWinds({ askConfirmation: false }),
+                  });
+                }, 0);
+              }}>New Game</button>
               <button className="menu-popup-action" onClick={() => { addPlayer(); setMenuOpen(false); }}>Add Player</button>
               <button className="menu-popup-action menu-popup-action--warn" onClick={() => { setPlayers(players => players.map(p => ({ ...p, score: 0 }))); setGames([]); setMenuOpen(false); }}>Clear Scores</button>
+              <button className="menu-popup-action" onClick={() => { rollForWinds(); setMenuOpen(false); }}>東南西北</button>
               <button className="menu-popup-action" onClick={() => { setActiveView('summary'); setMenuOpen(false); }}>View Summary</button>
             </div>
             <div className="menu-popup-divider" />
@@ -741,6 +809,9 @@ function App() {
                               >
                                 {p.name}
                               </span>
+                              {getWindForPlayer(p.id) && (
+                                <span className="wind-chip">{getWindForPlayer(p.id)}</span>
+                              )}
                               <br />
                               <span
                                 className={`score-box score-header-total${p.score < 0 ? ' negative' : ''}`}
@@ -874,6 +945,9 @@ function App() {
                           </span>
                           {/* Player tile content, unchanged style */}
                           <span className="active-player-name" onClick={() => changePlayerName(p.id)}>{p.name}</span>
+                          {getWindForPlayer(p.id) && (
+                            <span className="wind-chip wind-chip--sidebar">{getWindForPlayer(p.id)}</span>
+                          )}
                           <span className="active-player-score">({p.score})</span>
                         </div>
                       )}
@@ -1118,8 +1192,22 @@ function App() {
 
       <div className="mobile-quickbar" aria-label="Quick actions">
         <button className="mobile-quickbar-btn" onClick={() => setMenuOpen(m => !m)}>Menu</button>
-        <button className="mobile-quickbar-btn mobile-quickbar-btn--primary" onClick={openModal}>Record Score</button>
       </div>
+
+      <Modal
+        isOpen={confirmModalOpen}
+        onRequestClose={closeConfirmModal}
+        ariaHideApp={false}
+        className="modal-card modal-card--confirm"
+        overlayClassName="modal-overlay"
+      >
+        <h2 className="modal-title modal-title--confirm">{confirmModalTitle}</h2>
+        <p className="confirm-modal-message">{confirmModalMessage}</p>
+        <div className="confirm-modal-actions">
+          <button className="confirm-modal-btn confirm-modal-btn--cancel" onClick={closeConfirmModal}>Cancel</button>
+          <button className="confirm-modal-btn confirm-modal-btn--confirm" onClick={handleConfirmProceed}>Confirm</button>
+        </div>
+      </Modal>
         
   <Modal isOpen={modalOpen} onRequestClose={closeModal} ariaHideApp={false} className="modal-card modal-card--score" overlayClassName="modal-overlay" style={{ content: { position: 'relative', minHeight: '380px' } }}>
   <h2 className="modal-title">Record Game Score</h2>

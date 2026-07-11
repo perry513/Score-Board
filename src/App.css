@@ -67,6 +67,26 @@ body {
   left: 0;
 }
 
+.toolbar-center-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.toolbar-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid #d5e5f5;
+  background: #f3f9ff;
+  color: #21435f;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
 .menu-btn,
 .record-btn {
   border: none;
@@ -307,6 +327,25 @@ body {
   line-height: 1.2;
   display: inline-block;
   margin-bottom: 2px;
+}
+
+.wind-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e4f0ff;
+  border: 1px solid #b9d8ff;
+  color: #164a8a;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  vertical-align: middle;
+}
+
+.wind-chip--sidebar {
+  margin-left: 0;
+  margin-top: 4px;
 }
 
 .score-header-total {
@@ -640,9 +679,62 @@ select {
   width: min(92vw, 620px);
 }
 
+.modal-card--confirm {
+  width: min(92vw, 440px);
+  padding: 22px 22px 18px !important;
+  border-radius: 18px !important;
+  background: linear-gradient(165deg, #fffefc, #f6fbff);
+}
+
 .modal-title {
   margin: 0 0 12px;
   color: #29435c;
+}
+
+.modal-title--confirm {
+  margin-bottom: 10px;
+  font-size: 1.35rem;
+  text-align: center;
+}
+
+.confirm-modal-message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #d9e9fb;
+  background: #f2f8ff;
+  color: #21384e;
+  text-align: center;
+  font-size: 1.03rem;
+  line-height: 1.45;
+}
+
+.confirm-modal-actions {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.confirm-modal-btn {
+  min-height: 44px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.confirm-modal-btn--cancel {
+  background: #eef2f7;
+  color: #2f455d;
+  border-color: #d3deea;
+}
+
+.confirm-modal-btn--confirm {
+  background: linear-gradient(145deg, #1b7fe0, #0f68be);
+  color: #fff;
+  box-shadow: 0 8px 16px rgba(15, 104, 190, 0.23);
 }
 
 .modal-panel {
