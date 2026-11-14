@@ -3,6 +3,23 @@ import { computeTotals } from '../lib/scoring';
 
 // localStorage keys are unchanged from the original app so existing saves load.
 export const RULES = ['mahjong', 'scrabble'];
+
+// Colour themes (see App.css). `bg` / `accent` are only for the picker swatches.
+export const THEMES = [
+  { id: 'jade', name: 'Jade', bg: '#1d6b4b', accent: '#f2c45a', bar: '#0b2a1f' },
+  { id: 'midnight', name: 'Midnight', bg: '#24466e', accent: '#f2c45a', bar: '#0b1a2e' },
+  { id: 'charcoal', name: 'Charcoal', bg: '#3b3e44', accent: '#f0b54f', bar: '#16171a' },
+  { id: 'ivory', name: 'Ivory', bg: '#fbf7ee', accent: '#a5671a', bar: '#e6dbc4' },
+  { id: 'mist', name: 'Mist', bg: '#f7f9fc', accent: '#2b5c99', bar: '#dce4ed' },
+];
+export const readTheme = () => {
+  try {
+    const saved = localStorage.getItem('ui_theme');
+    return THEMES.some(t => t.id === saved) ? saved : 'jade';
+  } catch {
+    return 'jade';
+  }
+};
 const DEFAULT_PLAYERS = [1, 2, 3, 4, 5, 6].map(n => ({ id: `p${n}`, name: `Player ${n}`, score: 0 }));
 const DEFAULT_SEATS = ['p1', 'p2', 'p3', 'p4'];
 
@@ -42,6 +59,15 @@ export function useGameStore() {
   const [byRule, setByRule] = useState(() => Object.fromEntries(RULES.map(r => [r, loadRule(r)])));
   const [multiplier, setMultiplier] = useState(() => readNumber('chu_chong_multiplier', 2, 1, 3));
   const [uiScale, setUiScale] = useState(() => readNumber('ui_scale', 1, 0.8, 1.6));
+  const [theme, setTheme] = useState(readTheme);
+
+  useEffect(() => {
+    try { localStorage.setItem('ui_theme', theme); } catch { /* storage unavailable */ }
+    document.documentElement.dataset.theme = theme;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const t = THEMES.find(x => x.id === theme);
+    if (meta && t) meta.setAttribute('content', t.bar);
+  }, [theme]);
 
   const current = byRule[rule];
   const totals = useMemo(() => computeTotals(current.games), [current.games]);
@@ -133,6 +159,7 @@ export function useGameStore() {
     rule, setRule,
     multiplier, setMultiplier,
     uiScale, setUiScale,
+    theme, setTheme,
     players, seats, bench,
     games: current.games,
     ...actions,

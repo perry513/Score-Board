@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { WindTile } from './TableView';
+import { THEMES } from '../hooks/useGameStore';
 
 export default function SettingsView({ store, rulesPdf, confirm, prompt }) {
   const { rule, seats, bench, players, multiplier, uiScale, games } = store;
@@ -110,6 +111,27 @@ export default function SettingsView({ store, rulesPdf, confirm, prompt }) {
           confirmLabel: 'Add',
           onSubmit: name => store.addPlayer(name),
         })}>＋ Add player</button>
+      </section>
+
+      <section className="panel">
+        <h3 className="panel-title">Theme</h3>
+        <div className="theme-row" role="radiogroup" aria-label="Colour theme">
+          {THEMES.map(t => (
+            <button
+              key={t.id}
+              role="radio"
+              aria-checked={store.theme === t.id}
+              className={`theme-swatch${store.theme === t.id ? ' is-on' : ''}`}
+              onClick={() => store.setTheme(t.id)}
+            >
+              <span
+                className="theme-chip"
+                style={{ background: `linear-gradient(135deg, ${t.bg}, ${t.bar})`, '--chip-accent': t.accent }}
+              />
+              {t.name}
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className="panel">
